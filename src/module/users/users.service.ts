@@ -27,10 +27,13 @@ export class UserService {
 
   async registerUser(data: any) {
     const existing = await this.userRepo.findOne({
-      where: [{ email: data.email }, { mobileNumber: data.mobileNumber }],
+      where: [
+        { email: data.email },
+        { mobileNumber: data.mobileNumber },
+      ],
     });
 
-    if (existing) {
+    if (existing && existing.id) {
       throw new BadRequestException('User already exists');
     }
 
@@ -61,15 +64,18 @@ export class UserService {
 
   async registerTheaterOwner(data: any) {
     const existing = await this.userRepo.findOne({
-      where: [{ email: data.email }, { mobileNumber: data.mobileNumber }],
+      where: [
+        { email: data.email },
+        { mobileNumber: data.mobileNumber },
+      ],
     });
 
-    if (existing) {
+    if (existing && existing.id) {
       throw new BadRequestException('User already exists');
     }
 
     const role = await this.roleRepo.findOne({
-      where: { name: 'THEATER_OWNER' },
+      where: { name: 'THEATRE OWNER' },
     });
 
     const hashedPassword = await bcrypt.hash(data.password, 10);

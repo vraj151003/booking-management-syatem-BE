@@ -6,7 +6,11 @@ import { UserModule } from './module/users/user.module';
 import { OtpModule } from './module/otp/otp.module';
 import { AuthModule } from './module/auth/auth.module';
 import { PermissionModule } from './module/permission/permission.module';
+import { ScreenModule } from './module/screen/screen.module';
+import { MovieModule } from './module/movie/movie.module';
+import { ShowModule } from './module/show/show.module';
 import databaseConfig from './common/config/databaseConfig';
+import { BookingModule } from './module/booking/booking.module';
 
 @Module({
   imports: [
@@ -33,6 +37,10 @@ import databaseConfig from './common/config/databaseConfig';
     OtpModule,
     AuthModule,
     PermissionModule,
+    ScreenModule,
+    MovieModule,
+    ShowModule,
+    BookingModule
   ],
 })
 export class AppModule {}

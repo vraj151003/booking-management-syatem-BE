@@ -24,6 +24,14 @@ export async function seedPermissions(dataSource: DataSource) {
       { name: 'MANAGE_MOVIE', description: 'Permission to manage movies' },
       { name: 'MANAGE_SHOW', description: 'Permission to manage shows' },
       { name: 'MANAGE_BOOKING', description: 'Permission to manage bookings' },
+      { name: 'CREATE_SCREEN', description: 'Permission to create screens' },
+      { name: 'READ_SCREEN', description: 'Permission to read screens' },
+      { name: 'UPDATE_SCREEN', description: 'Permission to update screens' },
+      { name: 'DELETE_SCREEN', description: 'Permission to delete screens' },
+      { name: 'CREATE_SHOW', description: 'Permission to create shows' },
+      { name: 'READ_SHOW', description: 'Permission to read shows' },
+      { name: 'UPDATE_SHOW', description: 'Permission to update shows' },
+      { name: 'DELETE_SHOW', description: 'Permission to delete shows' },
     ];
 
     for (const permission of permissions) {

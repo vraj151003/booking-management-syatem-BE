@@ -1,0 +1,61 @@
+{
+  "messages": {
+    "AUTH": {
+      "LOGIN": "login successful",
+      "USER_REGISTER": "user registration successful",
+      "THEATER_OWNER_REGISTER": "theater owner registration successful",
+      "OTP_VERIFY": "OTP verified successfully",
+      "FORGOT_PASSWORD": "OTP sent successfully",
+      "RESET_PASSWORD": "password reset successfully",
+      "GET_USER": "user retrieved successfully"
+    },
+    "OTP": {
+      "CREATE": "OTP created successfully",
+      "VERIFY": "OTP verified successfully",
+      "EXPIRED": "OTP has expired",
+      "INVALID": "Invalid OTP"
+    },
+    "ROLE": {
+      "CREATE": "role created successfully",
+      "GET_ALL": "roles retrieved successfully",
+      "UPDATE": "role updated successfully",
+      "DELETE": "role deleted successfully"
+    },
+    "PERMISSION": {
+      "GET_ALL": "permissions retrieved successfully",
+      "GET_BY_ID": "permission retrieved successfully",
+      "DELETE": "permission deleted successfully",
+      "ASSIGN_TO_ROLE": "permission assigned to role successfully",
+      "REMOVE_FROM_ROLE": "permission removed from role successfully"
+    },
+    "SCREEN": {
+      "CREATE": "Screen created with seats",
+      "GET_ALL": "Screen fetched successfully",
+      "GET_BY_ID": "Screen fetched successfully",
+      "UPDATE": "Screen updated successfully",
+      "DELETE": "Screen deleted successfully",
+      "NOT_FOUND": "Screen not found",
+      "USER_NOT_FOUND": "User not found"
+    },
+    "SHOW": {
+      "CREATE": "Show created with seat pricing",
+      "GET_ALL": "Shows fetched successfully",
+      "GET_BY_ID": "Show fetched successfully",
+      "DELETE": "Show deleted successfully",
+      "NOT_FOUND": "Show not found",
+      "MOVIE_NOT_FOUND": "Movie not found",
+      "SCREEN_NOT_FOUND": "Screen not found",
+      "INVALID_SEAT_TYPE": "Invalid seat type"
+    },
+    "ERROR": {
+      "400": "Bad request",
+      "401": "Unauthorized access",
+      "403": "Forbidden - insufficient permissions",
+      "404": "Resource not found",
+      "409": "Conflict - resource already exists",
+      "422": "Unprocessable entity - validation failed",
+      "500": "Internal server error",
+      "VALIDATION": "Validation failed"
+    }
+  }
+}

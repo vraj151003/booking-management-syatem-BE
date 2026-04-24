@@ -32,9 +32,7 @@ export class PermissionService {
     return this.permissionRepo.remove(permission);
   }
 
-  async assignPermissionToRole(permissionId: number, roleId: number) {
-    const permission = await this.findOne(permissionId);
-    
+  async assignPermissionToRole(permissionIds: number[], roleId: number) {
     const { Role } = require('../role/entity/role.entity');
     const role = await this.permissionRepo.manager.getRepository(Role).findOne({
       where: { id: roleId },
@@ -49,14 +47,23 @@ export class PermissionService {
       role.permissions = [];
     }
 
-    if (role.permissions.some(p => p.id === permissionId)) {
-      throw new BadRequestException('Permission already assigned to role');
+    const assignedPermissions: Permission[] = [];
+    for (const permissionId of permissionIds) {
+      const permission = await this.findOne(permissionId);
+      
+      if (!role.permissions.some(p => p.id === permissionId)) {
+        role.permissions.push(permission);
+        assignedPermissions.push(permission);
+      }
     }
 
-    role.permissions.push(permission);
     await this.permissionRepo.manager.getRepository(Role).save(role);
 
-    return { message: 'Permission assigned to role successfully' };
+    return {
+      message: `${assignedPermissions.length} permissions assigned to role successfully`,
+      assignedPermissions,
+      skipped: permissionIds.length - assignedPermissions.length,
+    };
   }
 
   async removePermissionFromRole(permissionId: number, roleId: number) {
