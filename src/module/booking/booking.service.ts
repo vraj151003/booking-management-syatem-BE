@@ -7,6 +7,10 @@ import { Seat } from '../seat/entity/seat.entity';
 import { Booking } from './entity/booking.entity';
 import { Repository } from 'typeorm';
 import { RedisService } from '../redis/redis.service';
+import { StripeService } from '../payment/stripe/stripe.service';
+import { PaymentService } from '../payment/payment.service';
+import { PaymentStatus } from '../payment/entity/payment.entity';
+import { Payment } from '../payment/entity/payment.entity';
 
 @Injectable()
 export class BookingService {
@@ -16,6 +20,8 @@ export class BookingService {
     private readonly bookingRepo: Repository<Booking>,
 
     private redisService: RedisService,
+    private stripeService: StripeService,
+    private paymentService: PaymentService,
   ) {}
 
   async createBooking(dto: CreateBookingDto) {
@@ -66,26 +72,40 @@ export class BookingService {
         totalAmount += show.pricing[seat.seatType] || 0;
       }
 
+      const paymentIntent =
+        await this.stripeService.createPaymentIntent(totalAmount);
+
       const booking = queryRunner.manager.create(Booking, {
         show,
         seats,
         totalAmount,
-        status: 'CONFIRMED',
+        status: 'PENDING',
+        paymentStatus: 'PENDING',
+        paymentIntentId: paymentIntent.id,
         user: { id: dto.userId },
       });
 
       const savedBooking = await queryRunner.manager.save(booking);
+
+      // Create payment within the same transaction
+      const payment = queryRunner.manager.create(Payment, {
+        booking: savedBooking,
+        user: { id: dto.userId } as any,
+        amount: totalAmount,
+        currency: 'INR',
+        paymentIntentId: paymentIntent.id,
+        status: PaymentStatus.PENDING,
+      });
+      await queryRunner.manager.save(payment);
+
       await queryRunner.commitTransaction();
 
-      // Remove locks after successful booking
-      for (const seatId of dto.seatIds) {
-        const key = `lock:${dto.showId}:${seatId}`;
-        await this.redisService.deleteLock(key);
-      }
-
       return {
-        message: 'BOOKING SUCCESSFUL',
-        data: savedBooking,
+        message: 'Payment initiated',
+        data: {
+          booking: savedBooking,
+          clientSecret: paymentIntent.client_secret,
+        },
       };
     } catch (error) {
       await queryRunner.rollbackTransaction();
@@ -93,6 +113,30 @@ export class BookingService {
     } finally {
       await queryRunner.release();
     }
+  }
+
+  async confrimBooking(paymentIntentId: string) {
+    const booking = await this.bookingRepo.findOne({
+      where: { paymentIntentId },
+      relations: ['seats', 'show'],
+    });
+    if (!booking) {
+      throw new Error('Booking not found');
+    }
+    booking.status = 'CONFIRMED';
+    booking.paymentStatus = 'PAID';
+
+    await this.bookingRepo.save(booking);
+
+    for (const seat of booking.seats) {
+      const key = `lock:${booking.show.id}:${seat.id}`;
+      await this.redisService.deleteLock(key);
+    }
+
+    return {
+      message: 'Booking confirmed',
+      data: booking,
+    };
   }
 
   async lockSeats(showId: string, seatIds: string[], userId: string) {
@@ -150,6 +194,23 @@ export class BookingService {
     };
   }
 
+  async findBookingsByTheaterOwner(theaterOwnerId: string) {
+    const bookings = await this.bookingRepo
+      .createQueryBuilder('booking')
+      .leftJoinAndSelect('booking.user', 'user')
+      .leftJoinAndSelect('booking.show', 'show')
+      .leftJoinAndSelect('show.movie', 'movie')
+      .leftJoinAndSelect('show.screen', 'screen')
+      .leftJoinAndSelect('booking.seats', 'seats')
+      .where('screen.theaterOwnerId = :theaterOwnerId', { theaterOwnerId })
+      .getMany();
+
+    return {
+      message: 'Theater owner bookings retrieved successfully',
+      data: bookings,
+    };
+  }
+
   async cancelBooking(id: string) {
     const booking = await this.bookingRepo.findOne({
       where: { id },
@@ -165,6 +226,35 @@ export class BookingService {
     return {
       message: 'Booking cancelled successfully',
       data: booking,
+    };
+  }
+
+  async failBooking(paymentIntentId: string) {
+    const booking = await this.bookingRepo.findOne({
+      where: { paymentIntentId },
+      relations: ['seats', 'show'],
+    });
+
+    if (!booking) {
+      throw new NotFoundException('Booking not found');
+    }
+
+    if (booking.status === 'CONFIRMED') {
+      return;
+    }
+
+    booking.status = 'CANCELLED';
+    booking.paymentStatus = 'FAILED';
+
+    await this.bookingRepo.save(booking);
+
+    for (const seat of booking.seats) {
+      const key = `lock:${booking.show.id}:${seat.id}`;
+      await this.redisService.deleteLock(key);
+    }
+
+    return {
+      message: 'Booking marked as failed and locks released',
     };
   }
 }

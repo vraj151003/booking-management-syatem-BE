@@ -1,43 +1,32 @@
 import { DataSource } from 'typeorm';
 
-export async function seedTheaterOwner(dataSource: DataSource) {
+export async function seedCustomer(dataSource: DataSource) {
   const queryRunner = dataSource.createQueryRunner();
   await queryRunner.connect();
   await queryRunner.startTransaction();
 
   try {
-    // Check if THEATRE OWNER role exists, if not create it
+    // Check if CUSTOMER role exists, if not create it
     const roleExists = await queryRunner.query(
-      `SELECT * FROM "role" WHERE "name" = 'THEATRE OWNER'`,
+      `SELECT * FROM "role" WHERE "name" = 'CUSTOMER'`,
     );
 
     let roleId: number;
     if (roleExists.length === 0) {
       const roleResult = await queryRunner.query(
-        `INSERT INTO "role" ("name") VALUES ('THEATRE OWNER') RETURNING "id"`,
+        `INSERT INTO "role" ("name") VALUES ('CUSTOMER') RETURNING "id"`,
       );
       roleId = roleResult[0].id;
-      console.log('Created THEATRE OWNER role');
+      console.log('Created CUSTOMER role');
     } else {
       roleId = roleExists[0].id;
-      console.log('THEATRE OWNER role already exists');
+      console.log('CUSTOMER role already exists');
     }
 
-    // Assign SCREEN and SHOW permissions to THEATRE OWNER role
-    const theaterOwnerPermissions = [
-      'CREATE_SCREEN',
-      'READ_SCREEN',
-      'UPDATE_SCREEN',
-      'DELETE_SCREEN',
-      'CREATE_SHOW',
-      'READ_SHOW',
-      'UPDATE_SHOW',
-      'DELETE_SHOW',
-      'MANAGE_MOVIE',
-      'VIEW_THEATER_BOOKINGS',
-    ];
+    // Assign CREATE_BOOKING permission to CUSTOMER role
+    const customerPermissions = ['CREATE_BOOKING'];
 
-    for (const permissionName of theaterOwnerPermissions) {
+    for (const permissionName of customerPermissions) {
       const permission = await queryRunner.query(
         `SELECT "id" FROM "permission" WHERE "name" = $1 AND "isActive" = true`,
         [permissionName],
@@ -56,21 +45,15 @@ export async function seedTheaterOwner(dataSource: DataSource) {
             `INSERT INTO "role_permission" ("roleId", "permissionId") VALUES ($1, $2)`,
             [roleId, permissionId],
           );
-          console.log(`Assigned permission ${permissionName} to THEATRE OWNER role`);
         } else {
-          console.log(`Permission ${permissionName} already assigned to THEATRE OWNER role`);
         }
       } else {
-        console.log(`Permission ${permissionName} not found`);
       }
     }
-
-    console.log('SCREEN and SHOW permissions assigned to THEATRE OWNER role');
-
     await queryRunner.commitTransaction();
   } catch (error) {
     await queryRunner.rollbackTransaction();
-    console.error('Error seeding theater owner role:', error);
+    console.error('Error seeding customer role:', error);
     throw error;
   } finally {
     await queryRunner.release();

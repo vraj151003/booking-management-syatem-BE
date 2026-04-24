@@ -5,9 +5,11 @@ import { ShowService } from './show.service';
 import { ShowController } from './show.controller';
 import { Movie } from '../movie/entity/movie.entity';
 import { Screen } from '../screen/entity/screen.entity';
+import { Seat } from '../seat/entity/seat.entity';
+import { Booking } from '../booking/entity/booking.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Show, Movie, Screen])],
+  imports: [TypeOrmModule.forFeature([Show, Movie, Screen, Seat, Booking])],
   providers: [ShowService],
   controllers: [ShowController],
 })

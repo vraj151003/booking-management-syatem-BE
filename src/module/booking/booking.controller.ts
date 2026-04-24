@@ -2,6 +2,7 @@ import { Body, Controller, Get, Post, Param, Delete, UseGuards } from '@nestjs/c
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { BookingService } from './booking.service';
 import { CreateBookingDto } from './dto/create-booking-dto';
+import { LockSeatsDto } from './dto/lock-seats-dto';
 import { RequirePermissions } from '../permission/decorators/permissions.decorator';
 import { PermissionsGuard } from '../permission/guards/permission.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -13,8 +14,17 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 export class BookingController {
   constructor(private readonly bookingService: BookingService) {}
 
+  @Post('lock-seats')
+  @RequirePermissions('CREATE_BOOKING')
+  @ApiOperation({ summary: 'Lock seats for booking' })
+  @ApiResponse({ status: 200, description: 'Seats locked successfully' })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  async lockSeats(@Body() dto: LockSeatsDto) {
+    return this.bookingService.lockSeats(dto.showId, dto.seatIds, dto.userId);
+  }
+
   @Post()
-  @RequirePermissions('MANAGE_BOOKING')
+  @RequirePermissions('CREATE_BOOKING')
   @ApiOperation({ summary: 'Create a new booking' })
   @ApiResponse({ status: 201, description: 'Booking created successfully' })
   @ApiResponse({ status: 400, description: 'Bad request' })
@@ -46,6 +56,14 @@ export class BookingController {
   @ApiResponse({ status: 200, description: 'User bookings retrieved successfully' })
   async findByUser(@Param('userId') userId: string) {
     return this.bookingService.findBookingsByUser(userId);
+  }
+
+  @Get('theater-owner/:theaterOwnerId')
+  @RequirePermissions('VIEW_THEATER_BOOKINGS')
+  @ApiOperation({ summary: 'Get bookings by theater owner' })
+  @ApiResponse({ status: 200, description: 'Theater owner bookings retrieved successfully' })
+  async findByTheaterOwner(@Param('theaterOwnerId') theaterOwnerId: string) {
+    return this.bookingService.findBookingsByTheaterOwner(theaterOwnerId);
   }
 
   @Delete(':id')
