@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { CreateBookingDto } from './dto/create-booking-dto';
+import { ExportBookingsDto, ExportFilterType } from './dto/export-bookings-dto';
 import { Show } from '../show/entity/show.entity';
 import { Seat } from '../seat/entity/seat.entity';
 import { Booking } from './entity/booking.entity';
@@ -11,6 +12,12 @@ import { StripeService } from '../payment/stripe/stripe.service';
 import { PaymentService } from '../payment/payment.service';
 import { PaymentStatus } from '../payment/entity/payment.entity';
 import { Payment } from '../payment/entity/payment.entity';
+import { NotificationService } from '../notification/notification.service';
+import * as puppeteer from 'puppeteer';
+import * as ejs from 'ejs';
+import * as path from 'path';
+import * as QRCode from 'qrcode';
+import * as csvWriter from 'csv-writer';
 
 @Injectable()
 export class BookingService {
@@ -22,6 +29,7 @@ export class BookingService {
     private redisService: RedisService,
     private stripeService: StripeService,
     private paymentService: PaymentService,
+    private notificationService: NotificationService,
   ) {}
 
   async createBooking(dto: CreateBookingDto) {
@@ -47,6 +55,27 @@ export class BookingService {
 
       if (!show) {
         throw new NotFoundException('Show Not Found');
+      }
+
+      // Validate show date and time
+      const showDate = new Date(show.showDate);
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      
+      // Check if show date is in the past
+      if (showDate < today) {
+        throw new Error('Cannot book for past shows');
+      }
+
+      // Check if show is active
+      if (!show.isActive) {
+        throw new Error('Show is not available for booking');
+      }
+
+      // Validate show time format
+      const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
+      if (!timeRegex.test(show.startTime) || !timeRegex.test(show.endTime)) {
+        throw new Error('Invalid show time format');
       }
 
       const seats = await queryRunner.manager
@@ -118,7 +147,7 @@ export class BookingService {
   async confrimBooking(paymentIntentId: string) {
     const booking = await this.bookingRepo.findOne({
       where: { paymentIntentId },
-      relations: ['seats', 'show'],
+      relations: ['seats', 'show', 'show.movie', 'show.screen', 'show.screen.theaterOwner', 'user'],
     });
     if (!booking) {
       throw new Error('Booking not found');
@@ -131,6 +160,25 @@ export class BookingService {
     for (const seat of booking.seats) {
       const key = `lock:${booking.show.id}:${seat.id}`;
       await this.redisService.deleteLock(key);
+    }
+
+    // Send notifications to customer and theater owner
+    try {
+      await this.notificationService.sendBookingNotifications({
+        customerName: `${booking.user.firstName} ${booking.user.lastName}`,
+        customerEmail: booking.user.email,
+        theaterOwnerEmail: booking.show.screen.theaterOwner.email,
+        movieName: booking.show.movie.name,
+        showDate: booking.show.showDate,
+        showTime: booking.show.startTime,
+        screenName: booking.show.screen.name,
+        seats: booking.seats.map(seat => `${seat.row}${seat.seatNumber}`),
+        totalAmount: booking.totalAmount,
+        bookingId: booking.id,
+      });
+    } catch (error) {
+      console.error('Failed to send notifications:', error);
+      // Don't throw error to avoid failing the booking process
     }
 
     return {
@@ -256,5 +304,327 @@ export class BookingService {
     return {
       message: 'Booking marked as failed and locks released',
     };
+  }
+
+  async generateTicketPdf(bookingId: string): Promise<Buffer> {
+    const booking = await this.bookingRepo.findOne({
+      where: { id: bookingId },
+      relations: ['user', 'show', 'show.movie', 'show.screen', 'show.screen.theaterOwner', 'seats'],
+    });
+
+    if (!booking) {
+      throw new NotFoundException('Booking not found');
+    }
+
+    // Generate QR code with validation URL
+    let qrCodeImage: string = '';
+    try {
+      const baseUrl = process.env.BASE_URL || 'http://localhost:5001';
+      const validationUrl = `${baseUrl}/bookings/${bookingId}/validate`;
+      const qrCodeBuffer = await QRCode.toBuffer(validationUrl, {
+        width: 200,
+        margin: 1,
+      });
+      qrCodeImage = `data:image/png;base64,${qrCodeBuffer.toString('base64')}`;
+    } catch (error) {
+      console.error('Error generating QR code:', error);
+    }
+
+    // Render EJS template to HTML
+    const templatePath = path.join(process.cwd(), 'views/booking-ticket.ejs');
+    const html = await ejs.renderFile(templatePath, { booking, qrCodeImage });
+
+    // Launch Puppeteer
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    });
+
+    try {
+      const page = await browser.newPage();
+      await page.setContent(html, { waitUntil: 'networkidle0' });
+
+      // Generate PDF
+      const pdfBuffer = await page.pdf({
+        format: 'A4',
+        printBackground: true,
+        margin: {
+          top: '20px',
+          right: '20px',
+          bottom: '20px',
+          left: '20px',
+        },
+      });
+
+      await page.close();
+      return Buffer.from(pdfBuffer);
+    } finally {
+      await browser.close();
+    }
+  }
+
+  async validateBarcode(bookingId: string) {
+    const booking = await this.bookingRepo.findOne({
+      where: { id: bookingId },
+      relations: ['user', 'show', 'show.movie', 'show.screen', 'show.screen.theaterOwner', 'seats'],
+    });
+
+    if (!booking) {
+      throw new NotFoundException('Invalid booking ID');
+    }
+
+    // Check if booking is already used
+    if (booking.isUsed) {
+      return {
+        valid: false,
+        booking: {
+          id: booking.id,
+          movieTitle: booking.show.movie.name,
+          showDate: booking.show.showDate,
+          showTime: booking.show.startTime,
+          screen: booking.show.screen.name,
+          theatre: booking.show.screen.theaterOwner.theatreName || 'Grand Cinema',
+          seats: booking.seats.map(seat => `${seat.row}${seat.seatNumber}`),
+          customerName: `${booking.user.firstName} ${booking.user.lastName}`,
+          status: booking.status,
+          paymentStatus: booking.paymentStatus,
+          totalAmount: booking.totalAmount,
+        },
+        message: 'Already scanned',
+      };
+    }
+
+    // Check if booking is valid for entry
+    const isValid = booking.status === 'CONFIRMED' && booking.paymentStatus === 'PAID';
+
+    if (!isValid) {
+      return {
+        valid: false,
+        booking: {
+          id: booking.id,
+          movieTitle: booking.show.movie.name,
+          showDate: booking.show.showDate,
+          showTime: booking.show.startTime,
+          screen: booking.show.screen.name,
+          theatre: booking.show.screen.theaterOwner.theatreName || 'Grand Cinema',
+          seats: booking.seats.map(seat => `${seat.row}${seat.seatNumber}`),
+          customerName: `${booking.user.firstName} ${booking.user.lastName}`,
+          status: booking.status,
+          paymentStatus: booking.paymentStatus,
+          totalAmount: booking.totalAmount,
+        },
+        message: 'Invalid or expired ticket',
+      };
+    }
+
+    // Date and time validation
+    const now = new Date();
+    const showDate = new Date(booking.show.showDate);
+    const showStartTime = new Date(`${booking.show.showDate}T${booking.show.startTime}`);
+    const showEndTime = new Date(`${booking.show.showDate}T${booking.show.endTime}`);
+
+    // Check if show date is not today
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const showDay = new Date(showDate.getFullYear(), showDate.getMonth(), showDate.getDate());
+
+    if (showDay.getTime() !== today.getTime()) {
+      return {
+        valid: false,
+        booking: {
+          id: booking.id,
+          movieTitle: booking.show.movie.name,
+          showDate: booking.show.showDate,
+          showTime: booking.show.startTime,
+          screen: booking.show.screen.name,
+          theatre: booking.show.screen.theaterOwner.theatreName || 'Grand Cinema',
+          seats: booking.seats.map(seat => `${seat.row}${seat.seatNumber}`),
+          customerName: `${booking.user.firstName} ${booking.user.lastName}`,
+          status: booking.status,
+          paymentStatus: booking.paymentStatus,
+          totalAmount: booking.totalAmount,
+        },
+        message: 'Show is not for today',
+      };
+    }
+
+    // Check if too early (30 minutes before show start)
+    const thirtyMinutesBeforeShow = new Date(showStartTime.getTime() - 30 * 60 * 1000);
+    if (now < thirtyMinutesBeforeShow) {
+      return {
+        valid: false,
+        booking: {
+          id: booking.id,
+          movieTitle: booking.show.movie.name,
+          showDate: booking.show.showDate,
+          showTime: booking.show.startTime,
+          screen: booking.show.screen.name,
+          theatre: booking.show.screen.theaterOwner.theatreName || 'Grand Cinema',
+          seats: booking.seats.map(seat => `${seat.row}${seat.seatNumber}`),
+          customerName: `${booking.user.firstName} ${booking.user.lastName}`,
+          status: booking.status,
+          paymentStatus: booking.paymentStatus,
+          totalAmount: booking.totalAmount,
+        },
+        message: 'Too early - entry allowed 30 minutes before show',
+      };
+    }
+
+    // Check if expired (after show end time)
+    if (now > showEndTime) {
+      return {
+        valid: false,
+        booking: {
+          id: booking.id,
+          movieTitle: booking.show.movie.name,
+          showDate: booking.show.showDate,
+          showTime: booking.show.startTime,
+          screen: booking.show.screen.name,
+          theatre: booking.show.screen.theaterOwner.theatreName || 'Grand Cinema',
+          seats: booking.seats.map(seat => `${seat.row}${seat.seatNumber}`),
+          customerName: `${booking.user.firstName} ${booking.user.lastName}`,
+          status: booking.status,
+          paymentStatus: booking.paymentStatus,
+          totalAmount: booking.totalAmount,
+        },
+        message: 'Expired - show has ended',
+      };
+    }
+
+    // Mark ticket as used
+    booking.isUsed = true;
+    await this.bookingRepo.save(booking);
+
+    return {
+      valid: true,
+      booking: {
+        id: booking.id,
+        movieTitle: booking.show.movie.name,
+        showDate: booking.show.showDate,
+        showTime: booking.show.startTime,
+        screen: booking.show.screen.name,
+        theatre: booking.show.screen.theaterOwner.theatreName || 'Grand Cinema',
+        seats: booking.seats.map(seat => `${seat.row}${seat.seatNumber}`),
+        customerName: `${booking.user.firstName} ${booking.user.lastName}`,
+        status: booking.status,
+        paymentStatus: booking.paymentStatus,
+        totalAmount: booking.totalAmount,
+      },
+      message: 'Valid Entry',
+    };
+  }
+
+  async exportBookingsToCsv(theaterOwnerId: string, filters: ExportBookingsDto): Promise<Buffer> {
+    const queryBuilder = this.bookingRepo
+      .createQueryBuilder('booking')
+      .leftJoinAndSelect('booking.user', 'user')
+      .leftJoinAndSelect('booking.show', 'show')
+      .leftJoinAndSelect('show.movie', 'movie')
+      .leftJoinAndSelect('show.screen', 'screen')
+      .leftJoinAndSelect('screen.theaterOwner', 'theaterOwner')
+      .leftJoinAndSelect('booking.seats', 'seats')
+      .where('theaterOwner.id = :theaterOwnerId', { theaterOwnerId });
+
+    // Apply date filters only if filterType is provided
+    if (filters.filterType) {
+      const now = new Date();
+      let startDate: Date = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      let endDate: Date = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+
+      switch (filters.filterType) {
+        case ExportFilterType.TODAY:
+          startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          break;
+        case ExportFilterType.WEEK:
+          startDate = new Date(now);
+          startDate.setDate(now.getDate() - 7);
+          break;
+        case ExportFilterType.MONTH:
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+          break;
+        case ExportFilterType.YEAR:
+          startDate = new Date(now.getFullYear(), 0, 1);
+          break;
+        case ExportFilterType.CUSTOM:
+          if (filters.startDate && filters.endDate) {
+            startDate = new Date(filters.startDate);
+            endDate = new Date(filters.endDate);
+            endDate.setHours(23, 59, 59);
+          }
+          break;
+      }
+
+      if (startDate) {
+        queryBuilder.andWhere('booking.createdAt >= :startDate', { startDate });
+        queryBuilder.andWhere('booking.createdAt <= :endDate', { endDate });
+      }
+    }
+
+    // Apply additional filters
+    if (filters.movieId) {
+      queryBuilder.andWhere('movie.id = :movieId', { movieId: filters.movieId });
+    }
+
+    if (filters.screenId) {
+      queryBuilder.andWhere('screen.id = :screenId', { screenId: filters.screenId });
+    }
+
+    if (filters.status) {
+      queryBuilder.andWhere('booking.status = :status', { status: filters.status });
+    }
+
+    if (filters.paymentStatus) {
+      queryBuilder.andWhere('booking.paymentStatus = :paymentStatus', { paymentStatus: filters.paymentStatus });
+    }
+
+    const bookings = await queryBuilder.getMany();
+
+    // Prepare CSV data
+    const csvData = bookings.map(booking => ({
+      'Booking ID': booking.id,
+      'Movie Name': booking.show.movie.name,
+      'Show Date': booking.show.showDate,
+      'Show Time': booking.show.startTime,
+      'Screen': booking.show.screen.name,
+      'Seats': booking.seats.map(seat => `${seat.row}${seat.seatNumber}`).join(', '),
+      'Customer Name': `${booking.user.firstName} ${booking.user.lastName}`,
+      'Customer Email': booking.user.email,
+      'Total Amount': booking.totalAmount,
+      'Status': booking.status,
+      'Payment Status': booking.paymentStatus,
+      'Booking Date': booking.createdAt ? booking.createdAt.toISOString() : '',
+      'Is Used': booking.isUsed ? 'Yes' : 'No',
+    }));
+
+    // Generate CSV
+    const csvFilePath = `/tmp/bookings-export-${Date.now()}.csv`;
+    const writer = csvWriter.createObjectCsvWriter({
+      path: csvFilePath,
+      header: [
+        { id: 'Booking ID', title: 'Booking ID' },
+        { id: 'Movie Name', title: 'Movie Name' },
+        { id: 'Show Date', title: 'Show Date' },
+        { id: 'Show Time', title: 'Show Time' },
+        { id: 'Screen', title: 'Screen' },
+        { id: 'Seats', title: 'Seats' },
+        { id: 'Customer Name', title: 'Customer Name' },
+        { id: 'Customer Email', title: 'Customer Email' },
+        { id: 'Total Amount', title: 'Total Amount' },
+        { id: 'Status', title: 'Status' },
+        { id: 'Payment Status', title: 'Payment Status' },
+        { id: 'Booking Date', title: 'Booking Date' },
+        { id: 'Is Used', title: 'Is Used' },
+      ],
+    });
+
+    await writer.writeRecords(csvData);
+
+    // Read CSV file and return as buffer
+    const fs = require('fs');
+    const csvBuffer = fs.readFileSync(csvFilePath);
+    
+    // Clean up temp file
+    fs.unlinkSync(csvFilePath);
+
+    return csvBuffer;
   }
 }

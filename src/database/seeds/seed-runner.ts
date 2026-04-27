@@ -17,17 +17,14 @@ const dataSource = new DataSource({
 async function runSeeds() {
   try {
     await dataSource.initialize();
-    console.log('Database connection established');
 
     const seedsDir = path.join(__dirname);
     const seedFiles = fs.readdirSync(seedsDir).filter(file => 
       file.endsWith('.seed.ts') && file !== 'seed-runner.ts'
     );
 
-    console.log(`Found ${seedFiles.length} seed files`);
 
     for (const file of seedFiles) {
-      console.log(`\nRunning seed: ${file}`);
       const seedPath = path.join(seedsDir, file);
       const seedModule = await import(seedPath);
       
@@ -35,19 +32,15 @@ async function runSeeds() {
       const seedFunction = Object.values(seedModule)[0];
       if (typeof seedFunction === 'function') {
         await seedFunction(dataSource);
-        console.log(`✓ ${file} completed`);
       } else {
-        console.log(`⚠ ${file} does not export a function, skipping`);
       }
     }
 
-    console.log('\nAll seeds completed successfully');
   } catch (error) {
     console.error('Error running seeds:', error);
     process.exit(1);
   } finally {
     await dataSource.destroy();
-    console.log('Database connection closed');
   }
 }
 

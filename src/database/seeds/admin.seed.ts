@@ -18,10 +18,8 @@ export async function seedAdmin(dataSource: DataSource) {
         `INSERT INTO "role" ("name") VALUES ('ADMIN') RETURNING "id"`,
       );
       roleId = roleResult[0].id;
-      console.log('Created ADMIN role');
     } else {
       roleId = roleExists[0].id;
-      console.log('ADMIN role already exists');
     }
 
     // Check if admin user already exists
@@ -42,9 +40,7 @@ export async function seedAdmin(dataSource: DataSource) {
         [hashedPassword, roleId],
       );
 
-      console.log('Created admin user with email: vraj@yopmail.com');
     } else {
-      console.log('Admin user already exists with email: vraj@yopmail.com');
     }
 
     // Assign all permissions to ADMIN role
@@ -63,11 +59,9 @@ export async function seedAdmin(dataSource: DataSource) {
           `INSERT INTO "role_permission" ("roleId", "permissionId") VALUES ($1, $2)`,
           [roleId, permission.id],
         );
-        console.log(`Assigned permission ${permission.id} to ADMIN role`);
       }
     }
 
-    console.log('All permissions assigned to ADMIN role');
 
     await queryRunner.commitTransaction();
   } catch (error) {

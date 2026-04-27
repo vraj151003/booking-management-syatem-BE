@@ -84,14 +84,11 @@ export async function seedCustomerUsers(dataSource: DataSource) {
           ],
         );
 
-        console.log(`Created customer user: ${customer.email}`);
       } else {
-        console.log(`Customer user already exists: ${customer.email}`);
       }
     }
 
     await queryRunner.commitTransaction();
-    console.log('Customer users seeded successfully');
   } catch (error) {
     await queryRunner.rollbackTransaction();
     console.error('Error seeding customer users:', error);

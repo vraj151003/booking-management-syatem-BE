@@ -17,10 +17,8 @@ export async function seedTheaterOwner(dataSource: DataSource) {
         `INSERT INTO "role" ("name") VALUES ('THEATRE OWNER') RETURNING "id"`,
       );
       roleId = roleResult[0].id;
-      console.log('Created THEATRE OWNER role');
     } else {
       roleId = roleExists[0].id;
-      console.log('THEATRE OWNER role already exists');
     }
 
     // Assign SCREEN and SHOW permissions to THEATRE OWNER role
@@ -35,6 +33,7 @@ export async function seedTheaterOwner(dataSource: DataSource) {
       'DELETE_SHOW',
       'MANAGE_MOVIE',
       'VIEW_THEATER_BOOKINGS',
+      'EXPORT_BOOKINGS_CSV',
     ];
 
     for (const permissionName of theaterOwnerPermissions) {
@@ -56,16 +55,12 @@ export async function seedTheaterOwner(dataSource: DataSource) {
             `INSERT INTO "role_permission" ("roleId", "permissionId") VALUES ($1, $2)`,
             [roleId, permissionId],
           );
-          console.log(`Assigned permission ${permissionName} to THEATRE OWNER role`);
         } else {
-          console.log(`Permission ${permissionName} already assigned to THEATRE OWNER role`);
         }
       } else {
-        console.log(`Permission ${permissionName} not found`);
       }
     }
 
-    console.log('SCREEN and SHOW permissions assigned to THEATRE OWNER role');
 
     await queryRunner.commitTransaction();
   } catch (error) {

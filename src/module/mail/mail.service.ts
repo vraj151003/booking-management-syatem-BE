@@ -31,4 +31,11 @@ export class MailService {
       `,
     });
   }
+
+  async sendMail(mailOptions: { to: string; subject: string; html: string }) {
+    await this.transporter.sendMail({
+      from: this.configService.get<string>('database.mail_from') || '"Movie Booking" <noreply@example.com>',
+      ...mailOptions,
+    });
+  }
 }

@@ -1,0 +1,13 @@
+import { MigrationInterface, QueryRunner } from "typeorm";
+
+export class AddCreatedAtColumn1777273200000 implements MigrationInterface {
+    name = 'AddCreatedAtColumn1777273200000'
+
+    public async up(queryRunner: QueryRunner): Promise<void> {
+        await queryRunner.query(`ALTER TABLE "bookings" ADD COLUMN IF NOT EXISTS "createdAt" TIMESTAMP NOT NULL DEFAULT now()`);
+    }
+
+    public async down(queryRunner: QueryRunner): Promise<void> {
+        await queryRunner.query(`ALTER TABLE "bookings" DROP COLUMN "createdAt"`);
+    }
+}

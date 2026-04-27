@@ -17,10 +17,8 @@ export async function seedCustomer(dataSource: DataSource) {
         `INSERT INTO "role" ("name") VALUES ('CUSTOMER') RETURNING "id"`,
       );
       roleId = roleResult[0].id;
-      console.log('Created CUSTOMER role');
     } else {
       roleId = roleExists[0].id;
-      console.log('CUSTOMER role already exists');
     }
 
     // Assign CREATE_BOOKING permission to CUSTOMER role

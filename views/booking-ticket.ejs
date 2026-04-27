@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movie Booking Ticket</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', 'Open Sans', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #FFFFFF;
+            color: #000000;
+            padding: 40px;
+            font-size: 14px;
+        }
+
+        .ticket-container {
+            max-width: 210mm;
+            margin: 0 auto;
+            background: #FFFFFF;
+            border: 1px solid #DDDDDD;
+        }
+
+        /* Header Section */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 24px 32px;
+            border-bottom: 2px solid #DDDDDD;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: 700;
+            color: #000000;
+        }
+
+        .confirmation {
+            text-align: right;
+        }
+
+        .confirmation h1 {
+            font-size: 20px;
+            font-weight: 700;
+            color: #000000;
+            margin-bottom: 4px;
+        }
+
+        .confirmation p {
+            font-size: 12px;
+            color: #555555;
+        }
+
+        /* Movie Details Section */
+        .movie-details {
+            display: flex;
+            padding: 32px;
+            gap: 32px;
+            border-bottom: 2px dashed #DDDDDD;
+        }
+
+        .movie-poster {
+            width: 200px;
+            height: 280px;
+            background: #F5F5F5;
+            border: 1px solid #DDDDDD;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #999999;
+            font-size: 14px;
+        }
+
+        .movie-info {
+            flex: 1;
+        }
+
+        .movie-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #000000;
+            margin-bottom: 8px;
+        }
+
+        .age-rating {
+            display: inline-block;
+            background: #FF6B6B;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 24px;
+        }
+
+        .info-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+            font-size: 14px;
+        }
+
+        .info-icon {
+            margin-right: 12px;
+            font-size: 16px;
+        }
+
+        .info-label {
+            color: #555555;
+            margin-right: 8px;
+            font-weight: 400;
+        }
+
+        .info-value {
+            color: #000000;
+            font-weight: 600;
+        }
+
+        /* Seat Section */
+        .seat-section {
+            padding: 32px;
+            border-bottom: 2px dashed #DDDDDD;
+        }
+
+        .section-title {
+            text-align: center;
+            font-size: 18px;
+            font-weight: 700;
+            color: #000000;
+            margin-bottom: 24px;
+            text-transform: uppercase;
+        }
+
+        .seats-grid {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 16px;
+        }
+
+        .seat-box {
+            border: 2px dashed #DDDDDD;
+            padding: 16px 24px;
+            text-align: center;
+            min-width: 100px;
+        }
+
+        .seat-number {
+            font-size: 20px;
+            font-weight: 700;
+            color: #000000;
+            margin-bottom: 4px;
+        }
+
+        .seat-screen {
+            font-size: 12px;
+            color: #555555;
+        }
+
+        /* Barcode/QR Section */
+        .barcode-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 32px;
+            border-bottom: 2px dashed #DDDDDD;
+        }
+
+        .booking-info {
+            flex: 1;
+        }
+
+        .booking-info-item {
+            margin-bottom: 8px;
+        }
+
+        .booking-info-label {
+            font-size: 12px;
+            color: #555555;
+        }
+
+        .booking-info-value {
+            font-size: 14px;
+            font-weight: 600;
+            color: #000000;
+        }
+
+        .barcode-area {
+            flex: 2;
+            text-align: center;
+        }
+
+        .barcode-placeholder {
+            height: 60px;
+            background: #F5F5F5;
+            border: 1px solid #DDDDDD;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #999999;
+            font-size: 12px;
+        }
+
+        .barcode-text {
+            font-size: 12px;
+            color: #555555;
+        }
+
+        .qr-area {
+            flex: 1;
+            text-align: center;
+        }
+
+        .qr-placeholder {
+            width: 100px;
+            height: 100px;
+            background: #F5F5F5;
+            border: 1px solid #DDDDDD;
+            margin: 0 auto 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #999999;
+            font-size: 12px;
+        }
+
+        .qr-text {
+            font-size: 12px;
+            color: #555555;
+        }
+
+        /* Footer Section */
+        .footer {
+            display: flex;
+            justify-content: space-between;
+            padding: 32px;
+            border-bottom: 2px dashed #DDDDDD;
+        }
+
+        .footer-section {
+            flex: 1;
+        }
+
+        .footer-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: #000000;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+        }
+
+        .footer-list {
+            list-style: none;
+        }
+
+        .footer-list li {
+            font-size: 12px;
+            color: #555555;
+            margin-bottom: 6px;
+            padding-left: 16px;
+            position: relative;
+        }
+
+        .footer-list li:before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            color: #000000;
+        }
+
+        /* Final Footer */
+        .final-footer {
+            text-align: center;
+            padding: 24px 32px;
+        }
+
+        .final-footer p {
+            font-size: 14px;
+            color: #555555;
+            margin-bottom: 4px;
+        }
+
+        .final-footer .disclaimer {
+            font-size: 11px;
+            color: #999999;
+        }
+
+        /* Scissor icon for dividers */
+        .divider-with-scissors {
+            position: relative;
+            margin: 0;
+        }
+
+        .divider-with-scissors:before {
+            content: "✂️";
+            position: absolute;
+            left: -10px;
+            top: -12px;
+            font-size: 16px;
+        }
+
+        .divider-with-scissors:after {
+            content: "✂️";
+            position: absolute;
+            right: -10px;
+            top: -12px;
+            font-size: 16px;
+        }
+
+        @media print {
+            body {
+                padding: 0;
+            }
+            .ticket-container {
+                border: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="ticket-container">
+        <!-- Header Section -->
+        <div class="header">
+            <div class="logo">MovieBooking</div>
+            <div class="confirmation">
+                <h1>BOOKING CONFIRMED</h1>
+                <p>Thank you for your booking</p>
+            </div>
+        </div>
+
+        <!-- Movie Details Section -->
+        <div class="movie-details">
+            <div class="movie-poster">
+                Movie Poster
+            </div>
+            <div class="movie-info">
+                <h2 class="movie-title"><%= booking.show.movie.name %></h2>
+                <span class="age-rating">UA16+</span>
+                
+                <div class="info-row">
+                    <span class="info-icon">📅</span>
+                    <span class="info-label">Date:</span>
+                    <span class="info-value"><%= new Date(booking.show.showDate).toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' }) %></span>
+                </div>
+                
+                <div class="info-row">
+                    <span class="info-icon">⏰</span>
+                    <span class="info-label">Time:</span>
+                    <span class="info-value"><%= booking.show.startTime %></span>
+                </div>
+                
+                <div class="info-row">
+                    <span class="info-icon">📍</span>
+                    <span class="info-label">Theatre:</span>
+                    <span class="info-value"><%= booking.show.screen.theaterOwner.theatreName || 'Grand Cinema' %></span>
+                </div>
+                
+                <div class="info-row">
+                    <span class="info-icon">🎬</span>
+                    <span class="info-label">Screen:</span>
+                    <span class="info-value"><%= booking.show.screen.name %></span>
+                </div>
+                
+                <div class="info-row">
+                    <span class="info-icon">💺</span>
+                    <span class="info-label">Seats:</span>
+                    <span class="info-value">
+                        <% booking.seats.forEach(function(seat, index) { %>
+                            <%= seat.row %><%= seat.number %><% if (index < booking.seats.length - 1) { %>, <% } %>
+                        <% }); %>
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Seat Section -->
+        <div class="seat-section divider-with-scissors">
+            <h3 class="section-title">YOUR SEATS</h3>
+            <div class="seats-grid">
+                <% booking.seats.forEach(function(seat) { %>
+                    <div class="seat-box">
+                        <div class="seat-number"><%= seat.row %><%= seat.number %></div>
+                        <div class="seat-screen"><%= booking.show.screen.name %></div>
+                    </div>
+                <% }); %>
+            </div>
+        </div>
+
+        <!-- Barcode/QR Section -->
+        <div class="barcode-section divider-with-scissors">
+            <div class="booking-info">
+                <div class="booking-info-item">
+                    <div class="booking-info-label">Booking ID</div>
+                    <div class="booking-info-value"><%= booking.id %></div>
+                </div>
+                <div class="booking-info-item">
+                    <div class="booking-info-label">Show Date</div>
+                    <div class="booking-info-value"><%= new Date(booking.show.showDate).toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' }) %></div>
+                </div>
+                <div class="booking-info-item">
+                    <div class="booking-info-label">Show Time</div>
+                    <div class="booking-info-value"><%= booking.show.startTime %></div>
+                </div>
+                <div class="booking-info-item">
+                    <div class="booking-info-label">Payment Status</div>
+                    <div class="booking-info-value"><%= booking.paymentStatus %></div>
+                </div>
+            </div>
+            
+            <div class="qr-area">
+                <% if (qrCodeImage) { %>
+                    <img src="<%= qrCodeImage %>" alt="QR Code" style="width: 100px; height: 100px;" />
+                <% } else { %>
+                    <div class="qr-placeholder">QR</div>
+                <% } %>
+                <div class="qr-text">Scan for entry</div>
+            </div>
+        </div>
+
+        <!-- Footer Section -->
+        <div class="footer divider-with-scissors">
+            <div class="footer-section">
+                <h4 class="footer-title">IMPORTANT INSTRUCTIONS</h4>
+                <ul class="footer-list">
+                    <li>Carry valid ID proof</li>
+                    <li>Tickets are non-refundable</li>
+                    <li>No outside food allowed</li>
+                    <li>Arrive 15 minutes early</li>
+                </ul>
+            </div>
+            
+            <div class="footer-section">
+                <h4 class="footer-title">NEED HELP?</h4>
+                <ul class="footer-list">
+                    <li>Website: www.moviebooking.com</li>
+                    <li>Email: support@moviebooking.com</li>
+                    <li>Phone: +91 1800-123-4567</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Final Footer -->
+        <div class="final-footer">
+            <p>Enjoy your movie!</p>
+            <p class="disclaimer">This is a computer generated ticket. No signature required.</p>
+        </div>
+    </div>
+</body>
+</html>

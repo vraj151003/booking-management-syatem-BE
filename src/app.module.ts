@@ -12,6 +12,7 @@ import { ShowModule } from './module/show/show.module';
 import databaseConfig from './common/config/databaseConfig';
 import { BookingModule } from './module/booking/booking.module';
 import { PaymentModule } from './module/payment/payment.module';
+import { NotificationModule } from './module/notification/notification.module';
 
 @Module({
   imports: [
@@ -42,7 +43,8 @@ import { PaymentModule } from './module/payment/payment.module';
     MovieModule,
     ShowModule,
     BookingModule,
-    PaymentModule
+    PaymentModule,
+    NotificationModule,
   ],
 })
 export class AppModule {}

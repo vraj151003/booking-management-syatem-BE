@@ -1,4 +1,4 @@
-import { Payment } from 'src/module/payment/entity/payment.entity';
+import { Payment } from '../../payment/entity/payment.entity';
 import { Seat } from '../../seat/entity/seat.entity';
 import { Show } from '../../show/entity/show.entity';
 import { User } from '../../users/entity/user.entity';
@@ -10,6 +10,7 @@ import {
   JoinTable,
   ManyToMany,
   OneToMany,
+  CreateDateColumn,
 } from 'typeorm';
 
 @Entity('bookings')
@@ -41,4 +42,10 @@ export class Booking {
 
   @Column({ default: 'PENDING' })
   paymentStatus: string;
+
+  @Column({ default: false })
+  isUsed: boolean;
+
+  @CreateDateColumn()
+  createdAt: Date;
 }

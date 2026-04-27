@@ -26,6 +26,7 @@ export async function seedPermissions(dataSource: DataSource) {
       { name: 'MANAGE_BOOKING', description: 'Permission to manage bookings' },
       { name: 'CREATE_BOOKING', description: 'Permission to create bookings (customer only)' },
       { name: 'VIEW_THEATER_BOOKINGS', description: 'Permission to view bookings for theater owner shows' },
+      { name: 'EXPORT_BOOKINGS_CSV', description: 'Permission to export bookings to CSV (theater owner and admin only)' },
       { name: 'CREATE_SCREEN', description: 'Permission to create screens' },
       { name: 'READ_SCREEN', description: 'Permission to read screens' },
       { name: 'UPDATE_SCREEN', description: 'Permission to update screens' },
@@ -48,14 +49,11 @@ export async function seedPermissions(dataSource: DataSource) {
            VALUES ($1, $2, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
           [permission.name, permission.description],
         );
-        console.log(`Created permission: ${permission.name}`);
       } else {
-        console.log(`Permission already exists: ${permission.name}`);
       }
     }
 
     await queryRunner.commitTransaction();
-    console.log('Permissions seeded successfully');
   } catch (error) {
     await queryRunner.rollbackTransaction();
     console.error('Error seeding permissions:', error);
