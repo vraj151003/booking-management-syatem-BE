@@ -13,6 +13,10 @@ import databaseConfig from './common/config/databaseConfig';
 import { BookingModule } from './module/booking/booking.module';
 import { PaymentModule } from './module/payment/payment.module';
 import { NotificationModule } from './module/notification/notification.module';
+import { CouponModule } from './module/coupon/coupon.module';
+import { FavoriteModule } from './module/favorite/favorite.module';
+import { ReviewModule } from './module/review/review.module';
+import { MediaModule } from './module/media/media.module';
 
 @Module({
   imports: [
@@ -45,6 +49,10 @@ import { NotificationModule } from './module/notification/notification.module';
     BookingModule,
     PaymentModule,
     NotificationModule,
+    CouponModule,
+    FavoriteModule,
+    ReviewModule,
+    MediaModule,
   ],
 })
 export class AppModule {}

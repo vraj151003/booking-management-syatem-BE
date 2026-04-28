@@ -46,6 +46,12 @@ export class Booking {
   @Column({ default: false })
   isUsed: boolean;
 
+  @Column({ nullable: true })
+  couponId: string;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  discountAmount: number;
+
   @CreateDateColumn()
   createdAt: Date;
 }

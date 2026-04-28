@@ -9,6 +9,7 @@ import { User } from '../users/entity/user.entity';
 import { RedisModule } from '../redis/redis.module';
 import { PaymentModule } from '../payment/payment.module';
 import { NotificationModule } from '../notification/notification.module';
+import { CouponModule } from '../coupon/coupon.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { NotificationModule } from '../notification/notification.module';
     RedisModule,
     forwardRef(() => PaymentModule),
     NotificationModule,
+    CouponModule,
   ],
   controllers: [BookingController],
   providers: [BookingService],

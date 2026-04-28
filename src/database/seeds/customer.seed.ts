@@ -21,8 +21,8 @@ export async function seedCustomer(dataSource: DataSource) {
       roleId = roleExists[0].id;
     }
 
-    // Assign CREATE_BOOKING permission to CUSTOMER role
-    const customerPermissions = ['CREATE_BOOKING'];
+    // Assign CREATE_BOOKING, APPLY_COUPON, favorite, and review permissions to CUSTOMER role
+    const customerPermissions = ['CREATE_BOOKING', 'APPLY_COUPON', 'CREATE_FAVORITE', 'READ_FAVORITE', 'DELETE_FAVORITE', 'CREATE_REVIEW', 'READ_REVIEW', 'UPDATE_REVIEW', 'DELETE_REVIEW'];
 
     for (const permissionName of customerPermissions) {
       const permission = await queryRunner.query(

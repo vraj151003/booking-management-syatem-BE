@@ -8,6 +8,7 @@ import { RedisService } from '../redis/redis.service';
 import { StripeService } from '../payment/stripe/stripe.service';
 import { PaymentService } from '../payment/payment.service';
 import { NotificationService } from '../notification/notification.service';
+import { CouponService } from '../coupon/coupon.service';
 
 describe('BookingService', () => {
   let service: BookingService;
@@ -71,6 +72,11 @@ describe('BookingService', () => {
     sendBookingNotifications: jest.fn(),
   };
 
+  const mockCouponService = {
+    validateCoupon: jest.fn(),
+    incrementUsage: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -98,6 +104,10 @@ describe('BookingService', () => {
         {
           provide: NotificationService,
           useValue: mockNotificationService,
+        },
+        {
+          provide: CouponService,
+          useValue: mockCouponService,
         },
       ],
     }).compile();

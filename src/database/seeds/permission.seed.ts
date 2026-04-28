@@ -35,6 +35,18 @@ export async function seedPermissions(dataSource: DataSource) {
       { name: 'READ_SHOW', description: 'Permission to read shows' },
       { name: 'UPDATE_SHOW', description: 'Permission to update shows' },
       { name: 'DELETE_SHOW', description: 'Permission to delete shows' },
+      { name: 'CREATE_COUPON', description: 'Permission to create coupons' },
+      { name: 'READ_COUPON', description: 'Permission to read coupons' },
+      { name: 'UPDATE_COUPON', description: 'Permission to update coupons' },
+      { name: 'DELETE_COUPON', description: 'Permission to delete coupons' },
+      { name: 'APPLY_COUPON', description: 'Permission to apply coupons to bookings' },
+      { name: 'CREATE_FAVORITE', description: 'Permission to add items to favorites' },
+      { name: 'READ_FAVORITE', description: 'Permission to view favorites' },
+      { name: 'DELETE_FAVORITE', description: 'Permission to remove items from favorites' },
+      { name: 'CREATE_REVIEW', description: 'Permission to create reviews' },
+      { name: 'READ_REVIEW', description: 'Permission to read reviews' },
+      { name: 'UPDATE_REVIEW', description: 'Permission to update reviews' },
+      { name: 'DELETE_REVIEW', description: 'Permission to delete reviews' },
     ];
 
     for (const permission of permissions) {

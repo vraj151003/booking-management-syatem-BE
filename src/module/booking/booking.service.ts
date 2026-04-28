@@ -13,6 +13,7 @@ import { PaymentService } from '../payment/payment.service';
 import { PaymentStatus } from '../payment/entity/payment.entity';
 import { Payment } from '../payment/entity/payment.entity';
 import { NotificationService } from '../notification/notification.service';
+import { CouponService } from '../coupon/coupon.service';
 import * as puppeteer from 'puppeteer';
 import * as ejs from 'ejs';
 import * as path from 'path';
@@ -30,6 +31,7 @@ export class BookingService {
     private stripeService: StripeService,
     private paymentService: PaymentService,
     private notificationService: NotificationService,
+    private couponService: CouponService,
   ) {}
 
   async createBooking(dto: CreateBookingDto) {
@@ -101,6 +103,28 @@ export class BookingService {
         totalAmount += show.pricing[seat.seatType] || 0;
       }
 
+      let discountAmount = 0;
+      let couponId: string | undefined = undefined;
+
+      // Apply coupon if provided
+      if (dto.couponCode) {
+        try {
+          const validationResult = await this.couponService.validateCoupon({
+            code: dto.couponCode,
+            orderAmount: totalAmount,
+          });
+
+          if (validationResult.valid) {
+            discountAmount = validationResult.discountAmount;
+            couponId = validationResult.couponId;
+            totalAmount = validationResult.finalAmount;
+          }
+        } catch (error) {
+          // If coupon is invalid, continue without discount
+          console.error('Coupon validation failed:', error.message);
+        }
+      }
+
       const paymentIntent =
         await this.stripeService.createPaymentIntent(totalAmount);
 
@@ -112,6 +136,8 @@ export class BookingService {
         paymentStatus: 'PENDING',
         paymentIntentId: paymentIntent.id,
         user: { id: dto.userId },
+        couponId,
+        discountAmount,
       });
 
       const savedBooking = await queryRunner.manager.save(booking);
@@ -156,6 +182,15 @@ export class BookingService {
     booking.paymentStatus = 'PAID';
 
     await this.bookingRepo.save(booking);
+
+    // Increment coupon usage if coupon was applied
+    if (booking.couponId) {
+      try {
+        await this.couponService.incrementUsage(booking.couponId);
+      } catch (error) {
+        console.error('Failed to increment coupon usage:', error);
+      }
+    }
 
     for (const seat of booking.seats) {
       const key = `lock:${booking.show.id}:${seat.id}`;
