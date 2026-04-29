@@ -27,6 +27,9 @@ describe('MovieController', () => {
   const mockMovieService = {
     createMovie: jest.fn(),
     findAllMovies: jest.fn(),
+    findUpcomingMovies: jest.fn(),
+    findRunningMovies: jest.fn(),
+    findTrendingMovies: jest.fn(),
     findOneMovie: jest.fn(),
     updateMovie: jest.fn(),
     deleteMovie: jest.fn(),
@@ -144,6 +147,7 @@ describe('MovieController', () => {
           data: [],
         });
 
+      
         // Act
         const result = await controller.getMovies();
 
@@ -159,6 +163,141 @@ describe('MovieController', () => {
 
         // Act & Assert
         await expect(controller.getMovies()).rejects.toThrow('Database error');
+      });
+    });
+  });
+
+  describe('getUpcomingMovies', () => {
+    describe('Success cases', () => {
+      it('should return all upcoming movies', async () => {
+        // Arrange
+        mockMovieService.findUpcomingMovies.mockResolvedValue({
+          message: 'upcoming movies fetched successfully',
+          data: [mockMovie],
+        });
+
+        // Act
+        const result = await controller.getUpcomingMovies();
+
+        // Assert
+        expect(result).toHaveProperty('message');
+        expect(result).toHaveProperty('data');
+        expect(result.data).toEqual([mockMovie]);
+        expect(service.findUpcomingMovies).toHaveBeenCalled();
+      });
+
+      it('should return empty array when no upcoming movies exist', async () => {
+        // Arrange
+        mockMovieService.findUpcomingMovies.mockResolvedValue({
+          message: 'upcoming movies fetched successfully',
+          data: [],
+        });
+
+        // Act
+        const result = await controller.getUpcomingMovies();
+
+        // Assert
+        expect(result.data).toEqual([]);
+      });
+    });
+
+    describe('Edge cases', () => {
+      it('should handle service errors', async () => {
+        // Arrange
+        mockMovieService.findUpcomingMovies.mockRejectedValue(new Error('Database error'));
+
+        // Act & Assert
+        await expect(controller.getUpcomingMovies()).rejects.toThrow('Database error');
+      });
+    });
+  });
+
+  describe('getRunningMovies', () => {
+    describe('Success cases', () => {
+      it('should return all running movies', async () => {
+        // Arrange
+        mockMovieService.findRunningMovies.mockResolvedValue({
+          message: 'running movies fetched successfully',
+          data: [mockMovie],
+        });
+
+        // Act
+        const result = await controller.getRunningMovies();
+
+        // Assert
+        expect(result).toHaveProperty('message');
+        expect(result).toHaveProperty('data');
+        expect(result.data).toEqual([mockMovie]);
+        expect(service.findRunningMovies).toHaveBeenCalled();
+      });
+
+      it('should return empty array when no running movies exist', async () => {
+        // Arrange
+        mockMovieService.findRunningMovies.mockResolvedValue({
+          message: 'running movies fetched successfully',
+          data: [],
+        });
+
+        // Act
+        const result = await controller.getRunningMovies();
+
+        // Assert
+        expect(result.data).toEqual([]);
+      });
+    });
+
+    describe('Edge cases', () => {
+      it('should handle service errors', async () => {
+        // Arrange
+        mockMovieService.findRunningMovies.mockRejectedValue(new Error('Database error'));
+
+        // Act & Assert
+        await expect(controller.getRunningMovies()).rejects.toThrow('Database error');
+      });
+    });
+  });
+
+  describe('getTrendingMovies', () => {
+    describe('Success cases', () => {
+      it('should return top 10 trending movies', async () => {
+        // Arrange
+        mockMovieService.findTrendingMovies.mockResolvedValue({
+          message: 'trending movies fetched successfully',
+          data: [mockMovie],
+        });
+
+        // Act
+        const result = await controller.getTrendingMovies();
+
+        // Assert
+        expect(result).toHaveProperty('message');
+        expect(result).toHaveProperty('data');
+        expect(result.data).toEqual([mockMovie]);
+        expect(service.findTrendingMovies).toHaveBeenCalled();
+      });
+
+      it('should return empty array when no trending movies exist', async () => {
+        // Arrange
+        mockMovieService.findTrendingMovies.mockResolvedValue({
+          message: 'trending movies fetched successfully',
+          data: [],
+        });
+
+        // Act
+        const result = await controller.getTrendingMovies();
+
+        // Assert
+        expect(result.data).toEqual([]);
+      });
+    });
+
+    describe('Edge cases', () => {
+      it('should handle service errors', async () => {
+        // Arrange
+        mockMovieService.findTrendingMovies.mockRejectedValue(new Error('Database error'));
+
+        // Act & Assert
+        await expect(controller.getTrendingMovies()).rejects.toThrow('Database error');
       });
     });
   });

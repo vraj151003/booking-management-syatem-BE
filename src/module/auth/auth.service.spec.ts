@@ -51,10 +51,13 @@ describe('AuthService', () => {
     idProof: null as any,
     agreementDoc: null as any,
     adminVerified: false,
+    failedLoginAttempts: 0,
+    lockedUntil: null,
   };
 
   const mockUserRepo = {
     findOne: jest.fn(),
+    save: jest.fn(),
   };
 
   const mockJwtService = {
@@ -89,8 +92,10 @@ describe('AuthService', () => {
     describe('Success cases', () => {
       it('should return access token and user when credentials are valid', async () => {
         // Arrange
-        mockUserRepo.findOne.mockResolvedValue(mockUser);
+        const unlockedUser = { ...mockUser, failedLoginAttempts: 0, lockedUntil: null };
+        mockUserRepo.findOne.mockResolvedValue(unlockedUser);
         bcrypt.compare.mockResolvedValue(true);
+        mockUserRepo.save.mockResolvedValue(unlockedUser);
         mockJwtService.sign.mockReturnValue('jwt-token');
 
         // Act
@@ -99,7 +104,7 @@ describe('AuthService', () => {
         // Assert
         expect(result).toEqual({
           access_token: 'jwt-token',
-          user: mockUser,
+          user: unlockedUser,
         });
         expect(userRepo.findOne).toHaveBeenCalledWith({
           where: { email: 'test@example.com' },
@@ -115,9 +120,10 @@ describe('AuthService', () => {
 
       it('should return access token with verified user', async () => {
         // Arrange
-        const verifiedUser = { ...mockUser, isVerified: true };
+        const verifiedUser = { ...mockUser, isVerified: true, failedLoginAttempts: 0, lockedUntil: null };
         mockUserRepo.findOne.mockResolvedValue(verifiedUser);
         bcrypt.compare.mockResolvedValue(true);
+        mockUserRepo.save.mockResolvedValue(verifiedUser);
         mockJwtService.sign.mockReturnValue('jwt-token');
 
         // Act
@@ -147,6 +153,7 @@ describe('AuthService', () => {
         // Arrange
         mockUserRepo.findOne.mockResolvedValue(mockUser);
         bcrypt.compare.mockResolvedValue(false);
+        mockUserRepo.save.mockResolvedValue(mockUser);
 
         // Act & Assert
         await expect(service.login('test@example.com', 'wrongpassword')).rejects.toThrow(
@@ -186,6 +193,7 @@ describe('AuthService', () => {
         // Arrange
         mockUserRepo.findOne.mockResolvedValue(mockUser);
         bcrypt.compare.mockResolvedValue(false);
+        mockUserRepo.save.mockResolvedValue(mockUser);
 
         // Act & Assert
         await expect(service.login('test@example.com', '')).rejects.toThrow(
@@ -207,6 +215,7 @@ describe('AuthService', () => {
         // Arrange
         mockUserRepo.findOne.mockResolvedValue(mockUser);
         bcrypt.compare.mockResolvedValue(false);
+        mockUserRepo.save.mockResolvedValue(mockUser);
 
         // Act & Assert
         await expect(service.login('test@example.com', null as any)).rejects.toThrow(
@@ -228,6 +237,7 @@ describe('AuthService', () => {
         // Arrange
         mockUserRepo.findOne.mockResolvedValue(mockUser);
         bcrypt.compare.mockResolvedValue(false);
+        mockUserRepo.save.mockResolvedValue(mockUser);
 
         // Act & Assert
         await expect(service.login('test@example.com', undefined as any)).rejects.toThrow(
@@ -251,6 +261,7 @@ describe('AuthService', () => {
         const longPassword = 'a'.repeat(1000);
         mockUserRepo.findOne.mockResolvedValue(mockUser);
         bcrypt.compare.mockResolvedValue(false);
+        mockUserRepo.save.mockResolvedValue(mockUser);
 
         // Act & Assert
         await expect(service.login('test@example.com', longPassword)).rejects.toThrow(
@@ -272,6 +283,7 @@ describe('AuthService', () => {
         // Arrange
         mockUserRepo.findOne.mockResolvedValue(mockUser);
         bcrypt.compare.mockResolvedValue(false);
+        mockUserRepo.save.mockResolvedValue(mockUser);
 
         // Act & Assert
         await expect(service.login('test@example.com', 'p@$$w0rd!#$%')).rejects.toThrow(
@@ -281,9 +293,10 @@ describe('AuthService', () => {
 
       it('should handle user without role', async () => {
         // Arrange
-        const userWithoutRole = { ...mockUser, role: null };
+        const userWithoutRole = { ...mockUser, role: null, failedLoginAttempts: 0, lockedUntil: null };
         mockUserRepo.findOne.mockResolvedValue(userWithoutRole);
         bcrypt.compare.mockResolvedValue(true);
+        mockUserRepo.save.mockResolvedValue(userWithoutRole);
         mockJwtService.sign.mockReturnValue('jwt-token');
 
         // Act
@@ -302,8 +315,10 @@ describe('AuthService', () => {
     describe('Repository interactions', () => {
       it('should call userRepo.findOne with correct parameters', async () => {
         // Arrange
-        mockUserRepo.findOne.mockResolvedValue(mockUser);
+        const unlockedUser = { ...mockUser, failedLoginAttempts: 0, lockedUntil: null };
+        mockUserRepo.findOne.mockResolvedValue(unlockedUser);
         bcrypt.compare.mockResolvedValue(true);
+        mockUserRepo.save.mockResolvedValue(unlockedUser);
         mockJwtService.sign.mockReturnValue('jwt-token');
 
         // Act
@@ -319,8 +334,10 @@ describe('AuthService', () => {
 
       it('should call bcrypt.compare with correct parameters', async () => {
         // Arrange
-        mockUserRepo.findOne.mockResolvedValue(mockUser);
+        const unlockedUser = { ...mockUser, failedLoginAttempts: 0, lockedUntil: null };
+        mockUserRepo.findOne.mockResolvedValue(unlockedUser);
         bcrypt.compare.mockResolvedValue(true);
+        mockUserRepo.save.mockResolvedValue(unlockedUser);
         mockJwtService.sign.mockReturnValue('jwt-token');
 
         // Act
@@ -333,8 +350,10 @@ describe('AuthService', () => {
 
       it('should call jwtService.sign with correct payload', async () => {
         // Arrange
-        mockUserRepo.findOne.mockResolvedValue(mockUser);
+        const unlockedUser = { ...mockUser, failedLoginAttempts: 0, lockedUntil: null };
+        mockUserRepo.findOne.mockResolvedValue(unlockedUser);
         bcrypt.compare.mockResolvedValue(true);
+        mockUserRepo.save.mockResolvedValue(unlockedUser);
         mockJwtService.sign.mockReturnValue('jwt-token');
 
         // Act

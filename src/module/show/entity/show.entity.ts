@@ -3,9 +3,11 @@ import {
   PrimaryGeneratedColumn,
   Column,
   ManyToOne,
+  OneToMany,
 } from 'typeorm';
 import { Movie } from '../../movie/entity/movie.entity';
 import { Screen } from '../../screen/entity/screen.entity';
+import { Booking } from '../../booking/entity/booking.entity';
 
 @Entity('shows')
 export class Show {
@@ -32,4 +34,7 @@ export class Show {
 
   @Column({ default: true })
   isActive: boolean;
+
+  @OneToMany(() => Booking, booking => booking.show)
+  bookings: Booking[];
 }

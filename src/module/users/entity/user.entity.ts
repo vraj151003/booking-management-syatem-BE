@@ -112,4 +112,12 @@ export class User {
   @ApiProperty({ example: false, description: 'Admin verification status', required: false })
   @Column({ default: false })
   adminVerified: boolean;
+
+  @ApiProperty({ example: 0, description: 'Number of failed login attempts', default: 0 })
+  @Column({ default: 0 })
+  failedLoginAttempts: number;
+
+  @ApiProperty({ example: null, description: 'Account locked until timestamp', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
+  lockedUntil: Date | null;
 }

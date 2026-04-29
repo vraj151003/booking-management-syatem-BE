@@ -12,15 +12,39 @@ export class MediaService {
     return mimetype.startsWith('video/');
   }
 
+  private isPdf(mimetype: string): boolean {
+    return mimetype === 'application/pdf';
+  }
+
+  private isText(mimetype: string): boolean {
+    return mimetype === 'text/plain' || mimetype === 'text/csv';
+  }
+
   private async uploadSingleFile(file: any): Promise<MediaUploadResponseDto> {
     try {
-      const resourceType: 'image' | 'video' = this.isImage(file.mimetype) ? 'image' : 'video';
-      const allowedFormats = this.isImage(file.mimetype) 
-        ? ['jpg', 'jpeg', 'png', 'webp', 'gif'] 
-        : ['mp4', 'mov', 'avi', 'webm'];
-      const maxFileSize = this.isImage(file.mimetype) 
-        ? 5 * 1024 * 1024 // 5MB for images
-        : 50 * 1024 * 1024; // 50MB for videos
+      let resourceType: 'image' | 'video' | 'raw' = 'raw';
+      let allowedFormats: string[] = [];
+      let maxFileSize: number;
+
+      if (this.isImage(file.mimetype)) {
+        resourceType = 'image';
+        allowedFormats = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+        maxFileSize = 5 * 1024 * 1024; // 5MB for images
+      } else if (this.isVideo(file.mimetype)) {
+        resourceType = 'video';
+        allowedFormats = ['mp4', 'mov', 'avi', 'webm'];
+        maxFileSize = 50 * 1024 * 1024; // 50MB for videos
+      } else if (this.isPdf(file.mimetype)) {
+        resourceType = 'raw';
+        allowedFormats = ['pdf'];
+        maxFileSize = 10 * 1024 * 1024; // 10MB for PDFs
+      } else if (this.isText(file.mimetype)) {
+        resourceType = 'raw';
+        allowedFormats = ['txt', 'csv'];
+        maxFileSize = 2 * 1024 * 1024; // 2MB for text files
+      } else {
+        throw new BadRequestException(`Unsupported file type: ${file.mimetype}`);
+      }
 
       const uploadOptions = {
         resource_type: resourceType,
@@ -62,9 +86,6 @@ export class MediaService {
     if (!files || files.length === 0) {
       throw new BadRequestException('No files provided');
     }
-
-    console.log('Received files:', files.length);
-    console.log('First file properties:', files[0] ? Object.keys(files[0]) : 'No file');
 
     if (files.length === 1) {
       return await this.uploadSingleFile(files[0]);

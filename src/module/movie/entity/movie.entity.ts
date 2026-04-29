@@ -4,7 +4,14 @@ import {
   PrimaryGeneratedColumn,
   CreateDateColumn,
   UpdateDateColumn,
+  OneToMany,
 } from 'typeorm';
+import { Show } from '../../show/entity/show.entity';
+
+export enum MovieStatus {
+  UPCOMING = 'UPCOMING',
+  RUNNING = 'RUNNING',
+}
 
 @Entity('movies')
 export class Movie {
@@ -41,9 +48,19 @@ export class Movie {
   @Column({ default: true })
   isActive: boolean;
 
+  @Column({
+    type: 'enum',
+    enum: MovieStatus,
+    default: MovieStatus.UPCOMING,
+  })
+  status: MovieStatus;
+
   @CreateDateColumn()
   createdAt: Date;
 
   @UpdateDateColumn()
   updatedAt: Date;
+
+  @OneToMany(() => Show, show => show.movie)
+  shows: Show[];
 }

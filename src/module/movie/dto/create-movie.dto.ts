@@ -8,7 +8,9 @@ import {
   IsBoolean,
   ArrayNotEmpty,
   IsString as IsStringItem,
+  IsEnum,
 } from 'class-validator';
+import { MovieStatus } from '../entity/movie.entity';
 
 export class CreateMovieDto {
   @ApiProperty()
@@ -55,4 +57,9 @@ export class CreateMovieDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  @ApiProperty({ enum: MovieStatus, default: MovieStatus.UPCOMING })
+  @IsOptional()
+  @IsEnum(MovieStatus)
+  status?: MovieStatus;
 }
