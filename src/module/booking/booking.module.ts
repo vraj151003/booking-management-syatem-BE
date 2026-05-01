@@ -10,6 +10,7 @@ import { RedisModule } from '../redis/redis.module';
 import { PaymentModule } from '../payment/payment.module';
 import { NotificationModule } from '../notification/notification.module';
 import { CouponModule } from '../coupon/coupon.module';
+import { PricingModule } from '../pricing/pricing.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { CouponModule } from '../coupon/coupon.module';
     forwardRef(() => PaymentModule),
     NotificationModule,
     CouponModule,
+    PricingModule,
   ],
   controllers: [BookingController],
   providers: [BookingService],

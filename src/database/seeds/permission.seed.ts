@@ -47,6 +47,10 @@ export async function seedPermissions(dataSource: DataSource) {
       { name: 'READ_REVIEW', description: 'Permission to read reviews' },
       { name: 'UPDATE_REVIEW', description: 'Permission to update reviews' },
       { name: 'DELETE_REVIEW', description: 'Permission to delete reviews' },
+      { name: 'CREATE_HOLIDAY', description: 'Permission to create holidays' },
+      { name: 'READ_HOLIDAY', description: 'Permission to read holidays' },
+      { name: 'UPDATE_HOLIDAY', description: 'Permission to update holidays' },
+      { name: 'DELETE_HOLIDAY', description: 'Permission to delete holidays' },
     ];
 
     for (const permission of permissions) {

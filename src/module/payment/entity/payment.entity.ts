@@ -27,7 +27,16 @@ export class Payment {
   user: User;
 
   @Column()
-  amount: number;
+  baseAmount: number; // Ticket price before GST
+
+  @Column()
+  gstRate: number; // GST percentage (12 or 18)
+
+  @Column()
+  gstAmount: number; // Calculated GST amount
+
+  @Column()
+  totalAmount: number; // Final amount including GST
 
   @Column()
   currency: string;

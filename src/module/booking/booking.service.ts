@@ -14,6 +14,7 @@ import { PaymentStatus } from '../payment/entity/payment.entity';
 import { Payment } from '../payment/entity/payment.entity';
 import { NotificationService } from '../notification/notification.service';
 import { CouponService } from '../coupon/coupon.service';
+import { PricingService } from '../pricing/pricing.service';
 import * as puppeteer from 'puppeteer';
 import * as ejs from 'ejs';
 import * as path from 'path';
@@ -32,6 +33,7 @@ export class BookingService {
     private paymentService: PaymentService,
     private notificationService: NotificationService,
     private couponService: CouponService,
+    private pricingService: PricingService,
   ) {}
 
   async createBooking(dto: CreateBookingDto) {
@@ -91,16 +93,24 @@ export class BookingService {
         .leftJoin('booking.seats', 'seat')
         .where('booking.showId = :showId', { showId: dto.showId })
         .andWhere('seat.id IN (:...seatIds)', { seatIds: dto.seatIds })
-        .andWhere('booking.status = :status', { status: 'CONFIRMED' })
+        .andWhere('booking.status IN (:...statuses)', { statuses: ['PENDING', 'CONFIRMED'] })
         .getMany();
 
       if (existingBookings.length > 0) {
         throw new Error('Some seat already booked');
       }
 
+      // Apply dynamic pricing based on show date and time (weekends, holidays, and time of day)
+      const dynamicPricing = await this.pricingService.calculateDynamicPricingForSeats(
+        show.pricing,
+        show.showDate,
+        show.startTime,
+      );
+
       let totalAmount = 0;
       for (const seat of seats) {
-        totalAmount += show.pricing[seat.seatType] || 0;
+        const seatPricing = dynamicPricing[seat.seatType];
+        totalAmount += seatPricing.adjustedPrice;
       }
 
       let discountAmount = 0;
@@ -108,30 +118,29 @@ export class BookingService {
 
       // Apply coupon if provided
       if (dto.couponCode) {
-        try {
-          const validationResult = await this.couponService.validateCoupon({
-            code: dto.couponCode,
-            orderAmount: totalAmount,
-          });
+        const validationResult = await this.couponService.validateCoupon({
+          code: dto.couponCode,
+          orderAmount: totalAmount,
+        });
 
-          if (validationResult.valid) {
-            discountAmount = validationResult.discountAmount;
-            couponId = validationResult.couponId;
-            totalAmount = validationResult.finalAmount;
-          }
-        } catch (error) {
-          // If coupon is invalid, continue without discount
-          console.error('Coupon validation failed:', error.message);
+        if (validationResult.valid) {
+          discountAmount = validationResult.discountAmount;
+          couponId = validationResult.couponId;
+          totalAmount = validationResult.finalAmount;
         }
       }
 
+      // Calculate GST for the payment
+      const gstCalculation = this.paymentService.calculateGST(totalAmount);
+      const finalAmountWithGST = gstCalculation.totalAmount;
+
       const paymentIntent =
-        await this.stripeService.createPaymentIntent(totalAmount);
+        await this.stripeService.createPaymentIntent(finalAmountWithGST);
 
       const booking = queryRunner.manager.create(Booking, {
         show,
         seats,
-        totalAmount,
+        totalAmount: finalAmountWithGST,
         status: 'PENDING',
         paymentStatus: 'PENDING',
         paymentIntentId: paymentIntent.id,
@@ -146,7 +155,10 @@ export class BookingService {
       const payment = queryRunner.manager.create(Payment, {
         booking: savedBooking,
         user: { id: dto.userId } as any,
-        amount: totalAmount,
+        baseAmount: totalAmount,
+        gstRate: gstCalculation.gstRate,
+        gstAmount: gstCalculation.gstAmount,
+        totalAmount: gstCalculation.totalAmount,
         currency: 'INR',
         paymentIntentId: paymentIntent.id,
         status: PaymentStatus.PENDING,
@@ -183,7 +195,7 @@ export class BookingService {
 
     await this.bookingRepo.save(booking);
 
-    // Increment coupon usage if coupon was applied
+    // Increment coupon git  if coupon was applied
     if (booking.couponId) {
       try {
         await this.couponService.incrementUsage(booking.couponId);
@@ -230,11 +242,11 @@ export class BookingService {
         throw new Error('Seat already locked');
       }
 
-      // lock after 5 minutes
-      await this.redisService.setLock(key, userId, 300);
+      // lock after 20 minutes
+      await this.redisService.setLock(key, userId, 1200);
     }
     return {
-      message: 'Seats locked for 5 minutes',
+      message: 'Seats locked for 20 minutes',
     };
   }
 

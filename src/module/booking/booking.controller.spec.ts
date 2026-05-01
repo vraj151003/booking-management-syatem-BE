@@ -46,14 +46,14 @@ describe('BookingController', () => {
     it('should lock seats successfully', async () => {
       // Arrange
       mockBookingService.lockSeats.mockResolvedValue({
-        message: 'Seats locked for 5 minutes',
+        message: 'Seats locked for 20 minutes',
       });
 
       // Act
       const result = await controller.lockSeats(mockLockSeatsDto);
 
       // Assert
-      expect(result.message).toBe('Seats locked for 5 minutes');
+      expect(result.message).toBe('Seats locked for 20 minutes');
       expect(service.lockSeats).toHaveBeenCalledWith(
         mockLockSeatsDto.showId,
         mockLockSeatsDto.seatIds,
@@ -80,14 +80,14 @@ describe('BookingController', () => {
         seatIds: [],
       };
       mockBookingService.lockSeats.mockResolvedValue({
-        message: 'Seats locked for 5 minutes',
+        message: 'Seats locked for 20 minutes',
       });
 
       // Act
       const result = await controller.lockSeats(emptyDto);
 
       // Assert
-      expect(result.message).toBe('Seats locked for 5 minutes');
+      expect(result.message).toBe('Seats locked for 20 minutes');
     });
 
     it('should handle single seat lock', async () => {
@@ -97,14 +97,14 @@ describe('BookingController', () => {
         seatIds: ['seat-1'],
       };
       mockBookingService.lockSeats.mockResolvedValue({
-        message: 'Seats locked for 5 minutes',
+        message: 'Seats locked for 20 minutes',
       });
 
       // Act
       const result = await controller.lockSeats(singleSeatDto);
 
       // Assert
-      expect(result.message).toBe('Seats locked for 5 minutes');
+      expect(result.message).toBe('Seats locked for 20 minutes');
     });
   });
 

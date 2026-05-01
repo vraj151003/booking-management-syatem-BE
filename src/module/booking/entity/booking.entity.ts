@@ -11,6 +11,7 @@ import {
   ManyToMany,
   OneToMany,
   CreateDateColumn,
+  Index,
 } from 'typeorm';
 
 @Entity('bookings')
@@ -32,6 +33,7 @@ export class Booking {
   totalAmount: number;
 
   @Column({ default: 'PENDING' })
+  @Index()
   status: string;
 
   @OneToMany(() => Payment, (payment) => payment.booking)
@@ -41,17 +43,21 @@ export class Booking {
   paymentIntentId: string;
 
   @Column({ default: 'PENDING' })
+  @Index()
   paymentStatus: string;
 
   @Column({ default: false })
+  @Index()
   isUsed: boolean;
 
   @Column({ nullable: true })
+  @Index()
   couponId: string;
 
   @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
   discountAmount: number;
 
   @CreateDateColumn()
+  @Index()
   createdAt: Date;
 }

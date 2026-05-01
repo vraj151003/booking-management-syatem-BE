@@ -31,11 +31,66 @@ describe('PaymentService', () => {
     jest.clearAllMocks();
   });
 
+  describe('calculateGST', () => {
+    it('should calculate 12% GST for tickets <= 100', () => {
+      // Act
+      const result = service.calculateGST(90);
+
+      // Assert
+      expect(result.gstRate).toBe(12);
+      expect(result.gstAmount).toBe(10.8);
+      expect(result.totalAmount).toBe(100.8);
+    });
+
+    it('should calculate 12% GST for tickets exactly 100', () => {
+      // Act
+      const result = service.calculateGST(100);
+
+      // Assert
+      expect(result.gstRate).toBe(12);
+      expect(result.gstAmount).toBe(12);
+      expect(result.totalAmount).toBe(112);
+    });
+
+    it('should calculate 18% GST for tickets > 100', () => {
+      // Act
+      const result = service.calculateGST(200);
+
+      // Assert
+      expect(result.gstRate).toBe(18);
+      expect(result.gstAmount).toBe(36);
+      expect(result.totalAmount).toBe(236);
+    });
+
+    it('should calculate 18% GST for tickets > 100 with decimal', () => {
+      // Act
+      const result = service.calculateGST(150);
+
+      // Assert
+      expect(result.gstRate).toBe(18);
+      expect(result.gstAmount).toBe(27);
+      expect(result.totalAmount).toBe(177);
+    });
+
+    it('should round GST amount to 2 decimal places', () => {
+      // Act
+      const result = service.calculateGST(99.99);
+
+      // Assert
+      expect(result.gstRate).toBe(12);
+      expect(result.gstAmount).toBe(12); // 99.99 * 0.12 = 11.9988, rounded to 12
+      expect(result.totalAmount).toBe(111.99); // 99.99 + 12 = 111.99
+    });
+  });
+
   describe('createPayment', () => {
     const mockPaymentData = {
       booking: { id: 'booking-123' } as any,
       user: { id: 'user-123' } as any,
-      amount: 500,
+      baseAmount: 90,
+      gstRate: 12,
+      gstAmount: 10.8,
+      totalAmount: 100.8,
       currency: 'INR',
       paymentIntentId: 'pi-123',
       status: PaymentStatus.PENDING,
@@ -46,7 +101,7 @@ describe('PaymentService', () => {
       ...mockPaymentData,
     };
 
-    it('should create payment successfully', async () => {
+    it('should create payment successfully with GST fields', async () => {
       // Arrange
       mockPaymentRepo.create.mockReturnValue(mockPaymentData);
       mockPaymentRepo.save.mockResolvedValue(mockSavedPayment);
@@ -60,22 +115,108 @@ describe('PaymentService', () => {
       expect(mockPaymentRepo.save).toHaveBeenCalledWith(mockPaymentData);
     });
 
-    it('should handle payment creation with minimal data', async () => {
+    it('should auto-calculate GST when baseAmount is provided but GST fields are missing', async () => {
       // Arrange
-      const minimalData = {
-        amount: 100,
+      const dataWithoutGST = {
+        booking: { id: 'booking-123' } as any,
+        user: { id: 'user-123' } as any,
+        baseAmount: 90,
         currency: 'INR',
-        paymentIntentId: 'pi-456',
+        paymentIntentId: 'pi-123',
+        status: PaymentStatus.PENDING,
       };
-      mockPaymentRepo.create.mockReturnValue(minimalData);
-      mockPaymentRepo.save.mockResolvedValue({ id: 'payment-456', ...minimalData });
+
+      const expectedData = {
+        ...dataWithoutGST,
+        gstRate: 12,
+        gstAmount: 10.8,
+        totalAmount: 100.8,
+      };
+
+      mockPaymentRepo.create.mockReturnValue(expectedData);
+      mockPaymentRepo.save.mockResolvedValue({ id: 'payment-123', ...expectedData });
 
       // Act
-      const result = await service.createPayment(minimalData);
+      const result = await service.createPayment(dataWithoutGST);
 
       // Assert
       expect(result).toBeDefined();
-      expect(mockPaymentRepo.create).toHaveBeenCalledWith(minimalData);
+      expect(mockPaymentRepo.create).toHaveBeenCalledWith(expectedData);
+    });
+
+    it('should auto-calculate 18% GST for baseAmount > 100', async () => {
+      // Arrange
+      const dataWithoutGST = {
+        booking: { id: 'booking-123' } as any,
+        user: { id: 'user-123' } as any,
+        baseAmount: 200,
+        currency: 'INR',
+        paymentIntentId: 'pi-123',
+        status: PaymentStatus.PENDING,
+      };
+
+      const expectedData = {
+        ...dataWithoutGST,
+        gstRate: 18,
+        gstAmount: 36,
+        totalAmount: 236,
+      };
+
+      mockPaymentRepo.create.mockReturnValue(expectedData);
+      mockPaymentRepo.save.mockResolvedValue({ id: 'payment-123', ...expectedData });
+
+      // Act
+      const result = await service.createPayment(dataWithoutGST);
+
+      // Assert
+      expect(result).toBeDefined();
+      expect(mockPaymentRepo.create).toHaveBeenCalledWith(expectedData);
+    });
+
+    it('should not auto-calculate GST when all GST fields are already provided', async () => {
+      // Arrange
+      const dataWithGST = {
+        booking: { id: 'booking-123' } as any,
+        user: { id: 'user-123' } as any,
+        baseAmount: 90,
+        gstRate: 12,
+        gstAmount: 10.8,
+        totalAmount: 100.8,
+        currency: 'INR',
+        paymentIntentId: 'pi-123',
+        status: PaymentStatus.PENDING,
+      };
+
+      mockPaymentRepo.create.mockReturnValue(dataWithGST);
+      mockPaymentRepo.save.mockResolvedValue({ id: 'payment-123', ...dataWithGST });
+
+      // Act
+      const result = await service.createPayment(dataWithGST);
+
+      // Assert
+      expect(result).toBeDefined();
+      expect(mockPaymentRepo.create).toHaveBeenCalledWith(dataWithGST);
+    });
+
+    it('should not auto-calculate GST when baseAmount is not provided', async () => {
+      // Arrange
+      const dataWithoutBaseAmount = {
+        booking: { id: 'booking-123' } as any,
+        user: { id: 'user-123' } as any,
+        currency: 'INR',
+        paymentIntentId: 'pi-123',
+        status: PaymentStatus.PENDING,
+      };
+
+      mockPaymentRepo.create.mockReturnValue(dataWithoutBaseAmount);
+      mockPaymentRepo.save.mockResolvedValue({ id: 'payment-123', ...dataWithoutBaseAmount });
+
+      // Act
+      const result = await service.createPayment(dataWithoutBaseAmount);
+
+      // Assert
+      expect(result).toBeDefined();
+      expect(mockPaymentRepo.create).toHaveBeenCalledWith(dataWithoutBaseAmount);
     });
 
     it('should handle payment creation with all optional fields', async () => {

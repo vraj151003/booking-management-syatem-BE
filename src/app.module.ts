@@ -17,6 +17,9 @@ import { CouponModule } from './module/coupon/coupon.module';
 import { FavoriteModule } from './module/favorite/favorite.module';
 import { ReviewModule } from './module/review/review.module';
 import { MediaModule } from './module/media/media.module';
+import { HolidayModule } from './module/holiday/holiday.module';
+import { PricingModule } from './module/pricing/pricing.module';
+import { TheaterAnalyticsModule } from './module/theater-analytics/theater-analytics.module';
 
 @Module({
   imports: [
@@ -53,6 +56,9 @@ import { MediaModule } from './module/media/media.module';
     FavoriteModule,
     ReviewModule,
     MediaModule,
+    HolidayModule,
+    PricingModule,
+    TheaterAnalyticsModule,
   ],
 })
 export class AppModule {}

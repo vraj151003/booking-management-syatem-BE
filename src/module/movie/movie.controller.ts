@@ -1,12 +1,14 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, UseGuards, UseInterceptors, UploadedFile, Res } from '@nestjs/common';
 import { MovieModule } from './movie.module';
 import { MovieService } from './movie.service';
-import { ApiResponse, ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import { ApiResponse, ApiTags, ApiBearerAuth, ApiOperation, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { CreateMovieDto } from './dto/create-movie.dto';
 import { UpdateMovieDto } from './dto/update-movie.dto';
 import { RequirePermissions } from '../permission/decorators/permissions.decorator';
 import { PermissionsGuard } from '../permission/guards/permission.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { FileInterceptor } from '@nestjs/platform-express';
+import type { Response } from 'express';
 
 @ApiTags("movies")
 @ApiBearerAuth()
@@ -55,6 +57,17 @@ export class MovieController {
         return this.movieService.findTrendingMovies();
     }
 
+    @Get('sample-excel')
+    @RequirePermissions('MANAGE_MOVIE')
+    @ApiOperation({ summary: 'Download sample Excel file for bulk upload' })
+    @ApiResponse({ status: 200, description: 'Sample Excel file downloaded' })
+    downloadSampleExcel(@Res() res: Response) {
+        const buffer = this.movieService.generateSampleExcelFile();
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', 'attachment; filename=sample-movies.xlsx');
+        res.send(buffer);
+    }
+
     @Get(':id')
     @RequirePermissions('MANAGE_MOVIE')
     @ApiOperation({ summary: 'Get a movie by ID' })
@@ -77,5 +90,26 @@ export class MovieController {
     @ApiResponse({status : 200 , description : "Movie Deleted Successfully"})
     deleteMovie(@Param('id') id : string){
         return this.movieService.deleteMovie(id);
+    }
+
+    @Post('bulk-upload')
+    @RequirePermissions('MANAGE_MOVIE')
+    @UseInterceptors(FileInterceptor('file'))
+    @ApiConsumes('multipart/form-data')
+    @ApiOperation({ summary: 'Bulk upload movies from Excel file' })
+    @ApiBody({
+        schema: {
+            type: 'object',
+            properties: {
+                file: {
+                    type: 'string',
+                    format: 'binary',
+                },
+            },
+        },
+    })
+    @ApiResponse({ status: 201, description: 'Movies bulk uploaded successfully' })
+    bulkUploadMovies(@UploadedFile() file: Express.Multer.File) {
+        return this.movieService.bulkUploadMovies(file);
     }
 }

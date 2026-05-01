@@ -69,7 +69,7 @@ export class BookingController {
   }
 
   @Delete(':id')
-  @RequirePermissions('MANAGE_BOOKING')
+  @RequirePermissions('CREATE_BOOKING')
   @ApiOperation({ summary: 'Cancel booking' })
   @ApiResponse({ status: 200, description: 'Booking cancelled successfully' })
   @ApiResponse({ status: 404, description: 'Booking not found' })

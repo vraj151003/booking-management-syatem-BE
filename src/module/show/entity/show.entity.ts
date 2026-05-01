@@ -4,6 +4,7 @@ import {
   Column,
   ManyToOne,
   OneToMany,
+  Index,
 } from 'typeorm';
 import { Movie } from '../../movie/entity/movie.entity';
 import { Screen } from '../../screen/entity/screen.entity';
@@ -21,9 +22,11 @@ export class Show {
   screen: Screen;
 
   @Column({ type: 'date' })
+  @Index()
   showDate: string;
 
   @Column()
+  @Index()
   startTime: string;
 
   @Column()
@@ -33,6 +36,7 @@ export class Show {
   pricing: Record<string, number>;
 
   @Column({ default: true })
+  @Index()
   isActive: boolean;
 
   @OneToMany(() => Booking, booking => booking.show)

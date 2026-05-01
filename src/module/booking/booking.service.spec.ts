@@ -9,6 +9,7 @@ import { StripeService } from '../payment/stripe/stripe.service';
 import { PaymentService } from '../payment/payment.service';
 import { NotificationService } from '../notification/notification.service';
 import { CouponService } from '../coupon/coupon.service';
+import { PricingService } from '../pricing/pricing.service';
 
 describe('BookingService', () => {
   let service: BookingService;
@@ -66,6 +67,7 @@ describe('BookingService', () => {
     createPayment: jest.fn(),
     markSuccess: jest.fn(),
     markFailed: jest.fn(),
+    calculateGST: jest.fn(),
   };
 
   const mockNotificationService = {
@@ -75,6 +77,10 @@ describe('BookingService', () => {
   const mockCouponService = {
     validateCoupon: jest.fn(),
     incrementUsage: jest.fn(),
+  };
+
+  const mockPricingService = {
+    calculateDynamicPricingForSeats: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -108,6 +114,10 @@ describe('BookingService', () => {
         {
           provide: CouponService,
           useValue: mockCouponService,
+        },
+        {
+          provide: PricingService,
+          useValue: mockPricingService,
         },
       ],
     }).compile();
@@ -179,6 +189,15 @@ describe('BookingService', () => {
         .mockReturnValueOnce({ id: 'payment-123' });
       mockQueryRunner.manager.save.mockResolvedValue(mockBooking);
       mockStripeService.createPaymentIntent.mockResolvedValue(mockPaymentIntent);
+      mockPaymentService.calculateGST.mockReturnValue({
+        gstRate: 12,
+        gstAmount: 36,
+        totalAmount: 336,
+      });
+      mockPricingService.calculateDynamicPricingForSeats.mockResolvedValue({
+        GOLD: { originalPrice: 300, adjustedPrice: 300, multiplier: 1, reason: 'Standard weekday pricing' },
+        SILVER: { originalPrice: 200, adjustedPrice: 200, multiplier: 1, reason: 'Standard weekday pricing' },
+      });
 
       // Act
       const result = await service.createBooking(mockDto);
@@ -187,6 +206,8 @@ describe('BookingService', () => {
       expect(result.message).toBe('Payment initiated');
       expect(result.data.booking).toEqual(mockBooking);
       expect(result.data.clientSecret).toBe('secret-123');
+      expect(mockPricingService.calculateDynamicPricingForSeats).toHaveBeenCalledWith(mockShow.pricing, mockShow.showDate, mockShow.startTime);
+      expect(mockPaymentService.calculateGST).toHaveBeenCalledWith(500);
       expect(mockQueryRunner.connect).toHaveBeenCalled();
       expect(mockQueryRunner.startTransaction).toHaveBeenCalled();
       expect(mockQueryRunner.commitTransaction).toHaveBeenCalled();
@@ -251,12 +272,21 @@ describe('BookingService', () => {
         .mockReturnValueOnce({ id: 'payment-123' });
       mockQueryRunner.manager.save.mockResolvedValue(mockBooking);
       mockStripeService.createPaymentIntent.mockResolvedValue(mockPaymentIntent);
+      mockPaymentService.calculateGST.mockReturnValue({
+        gstRate: 12,
+        gstAmount: 60,
+        totalAmount: 560,
+      });
+      mockPricingService.calculateDynamicPricingForSeats.mockResolvedValue({
+        GOLD: { originalPrice: 300, adjustedPrice: 300, multiplier: 1, reason: 'Standard weekday pricing' },
+        SILVER: { originalPrice: 200, adjustedPrice: 200, multiplier: 1, reason: 'Standard weekday pricing' },
+      });
 
       // Act
       await service.createBooking(mockDto);
 
       // Assert
-      expect(mockBooking.totalAmount).toBe(500); // 300 + 200
+      expect(mockPaymentService.calculateGST).toHaveBeenCalledWith(500);
     });
 
     it('should handle zero pricing for unknown seat type', async () => {
@@ -274,12 +304,20 @@ describe('BookingService', () => {
         .mockReturnValueOnce({ id: 'payment-123' });
       mockQueryRunner.manager.save.mockResolvedValue(bookingWithZeroAmount);
       mockStripeService.createPaymentIntent.mockResolvedValue(mockPaymentIntent);
+      mockPaymentService.calculateGST.mockReturnValue({
+        gstRate: 12,
+        gstAmount: 0,
+        totalAmount: 0,
+      });
+      mockPricingService.calculateDynamicPricingForSeats.mockResolvedValue({
+        UNKNOWN: { originalPrice: 0, adjustedPrice: 0, multiplier: 1, reason: 'Standard weekday pricing' },
+      });
 
       // Act
       const result = await service.createBooking(mockDto);
 
       // Assert
-      expect(result.data.booking.totalAmount).toBe(0);
+      expect(mockPaymentService.calculateGST).toHaveBeenCalledWith(0);
     });
 
     it('should rollback transaction on error', async () => {
@@ -314,6 +352,15 @@ describe('BookingService', () => {
         .mockReturnValueOnce({ id: 'payment-123' });
       mockQueryRunner.manager.save.mockResolvedValue(mockBooking);
       mockStripeService.createPaymentIntent.mockResolvedValue(mockPaymentIntent);
+      mockPaymentService.calculateGST.mockReturnValue({
+        gstRate: 12,
+        gstAmount: 36,
+        totalAmount: 336,
+      });
+      mockPricingService.calculateDynamicPricingForSeats.mockResolvedValue({
+        GOLD: { originalPrice: 300, adjustedPrice: 300, multiplier: 1, reason: 'Standard weekday pricing' },
+        SILVER: { originalPrice: 200, adjustedPrice: 200, multiplier: 1, reason: 'Standard weekday pricing' },
+      });
 
       // Act
       await service.createBooking(mockDto);
@@ -336,12 +383,18 @@ describe('BookingService', () => {
         .mockReturnValueOnce({ id: 'payment-123' });
       mockQueryRunner.manager.save.mockResolvedValue(bookingWithZeroAmount);
       mockStripeService.createPaymentIntent.mockResolvedValue(mockPaymentIntent);
+      mockPaymentService.calculateGST.mockReturnValue({
+        gstRate: 12,
+        gstAmount: 0,
+        totalAmount: 0,
+      });
+      mockPricingService.calculateDynamicPricingForSeats.mockResolvedValue({});
 
       // Act
       const result = await service.createBooking(emptyDto);
 
       // Assert
-      expect(result.data.booking.totalAmount).toBe(0);
+      expect(mockPaymentService.calculateGST).toHaveBeenCalledWith(0);
     });
   });
 
@@ -500,17 +553,17 @@ describe('BookingService', () => {
       const result = await service.lockSeats(mockShowId, mockSeatIds, mockUserId);
 
       // Assert
-      expect(result.message).toBe('Seats locked for 5 minutes');
+      expect(result.message).toBe('Seats locked for 20 minutes');
       expect(mockRedisService.setLock).toHaveBeenCalledTimes(2);
       expect(mockRedisService.setLock).toHaveBeenCalledWith(
         `lock:${mockShowId}:seat-1`,
         mockUserId,
-        300,
+        1200,
       );
       expect(mockRedisService.setLock).toHaveBeenCalledWith(
         `lock:${mockShowId}:seat-2`,
         mockUserId,
-        300,
+        1200,
       );
     });
 
@@ -545,7 +598,7 @@ describe('BookingService', () => {
       const result = await service.lockSeats(mockShowId, emptySeats, mockUserId);
 
       // Assert
-      expect(result.message).toBe('Seats locked for 5 minutes');
+      expect(result.message).toBe('Seats locked for 20 minutes');
       expect(mockRedisService.setLock).not.toHaveBeenCalled();
     });
 

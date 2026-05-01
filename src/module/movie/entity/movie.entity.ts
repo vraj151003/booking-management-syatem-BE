@@ -5,6 +5,7 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   OneToMany,
+  Index,
 } from 'typeorm';
 import { Show } from '../../show/entity/show.entity';
 
@@ -19,24 +20,29 @@ export class Movie {
   id: string;
 
   @Column()
+  @Index()
   name: string;
 
   @Column('text')
   description: string;
 
   @Column()
-  duration: number; 
+  duration: number;
 
   @Column()
+  @Index()
   genre: string;
 
   @Column({ type: 'float', default: 0 })
+  @Index()
   rating: number;
 
   @Column()
+  @Index()
   language: string;
 
   @Column({ type: 'date' })
+  @Index()
   releaseDate: Date;
 
   @Column('text', { array: true, nullable: true })
@@ -46,6 +52,7 @@ export class Movie {
   trailer: string[];
 
   @Column({ default: true })
+  @Index()
   isActive: boolean;
 
   @Column({
@@ -53,6 +60,7 @@ export class Movie {
     enum: MovieStatus,
     default: MovieStatus.UPCOMING,
   })
+  @Index()
   status: MovieStatus;
 
   @CreateDateColumn()
