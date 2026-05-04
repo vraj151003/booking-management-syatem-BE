@@ -195,7 +195,7 @@ export class BookingService {
 
     await this.bookingRepo.save(booking);
 
-    // Increment coupon git  if coupon was applied
+    // Increment coupon git if coupon was applied
     if (booking.couponId) {
       try {
         await this.couponService.incrementUsage(booking.couponId);
@@ -224,8 +224,6 @@ export class BookingService {
         bookingId: booking.id,
       });
     } catch (error) {
-      console.error('Failed to send notifications:', error);
-      // Don't throw error to avoid failing the booking process
     }
 
     return {

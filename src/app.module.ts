@@ -20,6 +20,11 @@ import { MediaModule } from './module/media/media.module';
 import { HolidayModule } from './module/holiday/holiday.module';
 import { PricingModule } from './module/pricing/pricing.module';
 import { TheaterAnalyticsModule } from './module/theater-analytics/theater-analytics.module';
+import { ConcessionModule } from './module/concession/concession.module';
+import { ThrottlerModule } from './common/throttler/throttler.module';
+import { RedisModule } from './module/redis/redis.module';
+import { APP_GUARD } from '@nestjs/core';
+import { CustomThrottlerGuard } from './common/throttler/throttler.guard';
 
 @Module({
   imports: [
@@ -41,6 +46,9 @@ import { TheaterAnalyticsModule } from './module/theater-analytics/theater-analy
       }),
       inject: [ConfigService],
     }),
+    RedisModule,
+    ConcessionModule,
+    ThrottlerModule,
     RoleModule,
     UserModule,
     OtpModule,
@@ -59,6 +67,12 @@ import { TheaterAnalyticsModule } from './module/theater-analytics/theater-analy
     HolidayModule,
     PricingModule,
     TheaterAnalyticsModule,
+  ],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: CustomThrottlerGuard,
+    },
   ],
 })
 export class AppModule {}

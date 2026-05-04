@@ -24,4 +24,12 @@ export class RedisService {
  async deleteLock(key : string){
     return this.client.del(key)
  }
+
+ async increment(key : string){
+    return this.client.incr(key)
+ }
+
+ async expire(key : string, ttl : number){
+    return this.client.expire(key, ttl)
+ }
 }

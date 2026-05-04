@@ -51,7 +51,6 @@ export async function seedCustomer(dataSource: DataSource) {
     await queryRunner.commitTransaction();
   } catch (error) {
     await queryRunner.rollbackTransaction();
-    console.error('Error seeding customer role:', error);
     throw error;
   } finally {
     await queryRunner.release();

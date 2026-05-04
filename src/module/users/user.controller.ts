@@ -9,6 +9,7 @@ import { VerifyOtpDto } from "./dto/verify-otp.dto";
 import { LoginDto } from "./dto/login.dto";
 import { ForgotPasswordDto } from "./dto/forgot-password.dto";
 import { ResetPasswordDto } from "./dto/reset-password.dto";
+import { BypassThrottle } from "../../common/throttler/throttler.decorator";
 import * as messageConfig from "../../common/config/message.json";
 
 @ApiTags('auth')
@@ -20,6 +21,7 @@ export class UserController {
     ) {}
 
     @Post('register')
+    @BypassThrottle()
     @ApiOperation({ summary: 'Register a new user (customer)' })
     @ApiResponse({ status: 201, description: 'User registered successfully' })
     @ApiResponse({ status: 400, description: 'Bad request - user already exists' })
@@ -32,6 +34,7 @@ export class UserController {
     }
 
     @Post('register-theater-owner')
+    @BypassThrottle()
     @ApiOperation({ summary: 'Register a new theater owner' })
     @ApiResponse({ status: 201, description: 'Theater owner registered successfully' })
     @ApiResponse({ status: 400, description: 'Bad request' })
@@ -44,6 +47,7 @@ export class UserController {
     }
 
     @Post('verify-otp')
+    @BypassThrottle()
     @ApiOperation({ summary: 'Verify OTP for email' })
     @ApiResponse({ status: 200, description: 'OTP verified successfully' })
     @ApiResponse({ status: 404, description: 'User not found' })
@@ -85,6 +89,7 @@ export class UserController {
     }
 
     @Post('forgot-password')
+    @BypassThrottle()
     @ApiOperation({ summary: 'Request password reset OTP' })
     @ApiResponse({ status: 200, description: 'OTP sent successfully' })
     @ApiResponse({ status: 404, description: 'User not found' })
@@ -97,6 +102,7 @@ export class UserController {
     }
 
     @Post('reset-password')
+    @BypassThrottle()
     @ApiOperation({ summary: 'Reset password with OTP' })
     @ApiResponse({ status: 200, description: 'Password reset successfully' })
     @ApiResponse({ status: 404, description: 'User not found' })

@@ -26,16 +26,16 @@ export class Payment {
   @ManyToOne(() => User)
   user: User;
 
-  @Column()
+  @Column({ type: 'decimal', precision: 10, scale: 2 })
   baseAmount: number; // Ticket price before GST
 
-  @Column()
+  @Column({ type: 'decimal', precision: 10, scale: 2 })
   gstRate: number; // GST percentage (12 or 18)
 
-  @Column()
+  @Column({ type: 'decimal', precision: 10, scale: 2 })
   gstAmount: number; // Calculated GST amount
 
-  @Column()
+  @Column({ type: 'decimal', precision: 10, scale: 2 })
   totalAmount: number; // Final amount including GST
 
   @Column()

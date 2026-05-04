@@ -17,12 +17,31 @@ export class AddCreatedAtToBooking1777273046413 implements MigrationInterface {
         await queryRunner.query(`DROP INDEX "public"."IDX_payments_bookingId"`);
         await queryRunner.query(`DROP INDEX "public"."IDX_payments_userId"`);
         await queryRunner.query(`DROP INDEX "public"."IDX_otp_userId"`);
-        await queryRunner.query(`ALTER TABLE "bookings" ADD "createdAt" TIMESTAMP NOT NULL DEFAULT now()`);
+        // Check if column exists before adding
+        const tableInfo = await queryRunner.query(`
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name = 'bookings' 
+            AND column_name = 'createdAt'
+            AND table_schema = 'public'
+        `);
+        
+        if (tableInfo.length === 0) {
+            await queryRunner.query(`ALTER TABLE "bookings" ADD "createdAt" TIMESTAMP NOT NULL DEFAULT now()`);
+        }
         await queryRunner.query(`ALTER TABLE "permission" ALTER COLUMN "createdAt" SET DEFAULT now()`);
         await queryRunner.query(`ALTER TABLE "permission" ALTER COLUMN "updatedAt" SET DEFAULT now()`);
+        // Handle role table name column safely
         await queryRunner.query(`ALTER TABLE "role" DROP CONSTRAINT "UQ_ae4578dcaed5adff96595e61660"`);
-        await queryRunner.query(`ALTER TABLE "role" DROP COLUMN "name"`);
-        await queryRunner.query(`ALTER TABLE "role" ADD "name" character varying NOT NULL`);
+        
+        // Update null values with unique values
+        await queryRunner.query(`
+            UPDATE "role" 
+            SET "name" = 'ROLE_' || id::text 
+            WHERE "name" IS NULL
+        `);
+        
+        await queryRunner.query(`ALTER TABLE "role" ALTER COLUMN "name" SET NOT NULL`);
         await queryRunner.query(`ALTER TABLE "role" ADD CONSTRAINT "UQ_ae4578dcaed5adff96595e61660" UNIQUE ("name")`);
         await queryRunner.query(`ALTER TABLE "movies" ALTER COLUMN "createdAt" SET DEFAULT now()`);
         await queryRunner.query(`ALTER TABLE "movies" ALTER COLUMN "updatedAt" SET DEFAULT now()`);

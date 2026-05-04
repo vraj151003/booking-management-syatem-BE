@@ -2,6 +2,7 @@ import { Payment } from '../../payment/entity/payment.entity';
 import { Seat } from '../../seat/entity/seat.entity';
 import { Show } from '../../show/entity/show.entity';
 import { User } from '../../users/entity/user.entity';
+import { ConcessionOrder } from '../../concession/entity/concession-order.entity';
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -29,7 +30,7 @@ export class Booking {
   @JoinTable()
   seats: Seat[];
 
-  @Column()
+  @Column({ type: 'decimal', precision: 10, scale: 2 })
   totalAmount: number;
 
   @Column({ default: 'PENDING' })
@@ -56,6 +57,9 @@ export class Booking {
 
   @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
   discountAmount: number;
+
+  @OneToMany(() => ConcessionOrder, concessionOrder => concessionOrder.booking)
+  concessionOrders: ConcessionOrder[];
 
   @CreateDateColumn()
   @Index()

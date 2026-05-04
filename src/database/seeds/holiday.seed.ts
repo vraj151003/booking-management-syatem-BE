@@ -37,10 +37,8 @@ export async function seedHolidays(dataSource: DataSource) {
     }
 
     await queryRunner.commitTransaction();
-    console.log('Holidays seeded successfully');
   } catch (error) {
     await queryRunner.rollbackTransaction();
-    console.error('Error seeding holidays:', error);
     throw error;
   } finally {
     await queryRunner.release();

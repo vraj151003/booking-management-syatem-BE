@@ -51,6 +51,24 @@ export async function seedPermissions(dataSource: DataSource) {
       { name: 'READ_HOLIDAY', description: 'Permission to read holidays' },
       { name: 'UPDATE_HOLIDAY', description: 'Permission to update holidays' },
       { name: 'DELETE_HOLIDAY', description: 'Permission to delete holidays' },
+      // Concession Management Permissions (Theater Owner)
+      { name: 'CREATE_CONCESSION_CATEGORY', description: 'Permission to create concession categories (theater owner only)' },
+      { name: 'READ_CONCESSION_CATEGORY', description: 'Permission to read concession categories' },
+      { name: 'UPDATE_CONCESSION_CATEGORY', description: 'Permission to update concession categories (theater owner only)' },
+      { name: 'DELETE_CONCESSION_CATEGORY', description: 'Permission to delete concession categories (theater owner only)' },
+      { name: 'CREATE_CONCESSION', description: 'Permission to create concessions (theater owner only)' },
+      { name: 'READ_CONCESSION', description: 'Permission to read concessions' },
+      { name: 'UPDATE_CONCESSION', description: 'Permission to update concessions (theater owner only)' },
+      { name: 'DELETE_CONCESSION', description: 'Permission to delete concessions (theater owner only)' },
+      { name: 'UPDATE_CONCESSION_STOCK', description: 'Permission to update concession stock (theater owner only)' },
+      // Concession Order Permissions (Customer)
+      { name: 'CREATE_CONCESSION_ORDER', description: 'Permission to create concession orders (customer only)' },
+      { name: 'READ_CONCESSION_ORDER', description: 'Permission to read concession orders' },
+      { name: 'UPDATE_CONCESSION_ORDER_STATUS', description: 'Permission to update concession order status (theater owner only)' },
+      { name: 'MARK_CONCESSION_ORDER_PAID', description: 'Permission to mark concession order as paid' },
+      { name: 'READ_CONCESSION_ORDERS_BY_USER', description: 'Permission to read own concession orders (customer only)' },
+      { name: 'READ_CONCESSION_ORDERS_BY_BOOKING', description: 'Permission to read concession orders by booking' },
+      { name: 'CHECK_CONCESSION_STOCK', description: 'Permission to check concession stock availability' },
     ];
 
     for (const permission of permissions) {
