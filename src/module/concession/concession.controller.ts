@@ -8,7 +8,6 @@ import { CreateConcessionOrderDto } from './dto/create-concession-order.dto';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { ConcessionStatus } from './entity/concession.entity';
 import { ConcessionOrderStatus } from './entity/concession-order.entity';
 
 @ApiTags('concessions')

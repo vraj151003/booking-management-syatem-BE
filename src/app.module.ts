@@ -21,10 +21,13 @@ import { HolidayModule } from './module/holiday/holiday.module';
 import { PricingModule } from './module/pricing/pricing.module';
 import { TheaterAnalyticsModule } from './module/theater-analytics/theater-analytics.module';
 import { ConcessionModule } from './module/concession/concession.module';
+import { AuditModule } from './module/audit/audit.module';
+import { RecommendationModule } from './module/recommendation/recommendation.module';
 import { ThrottlerModule } from './common/throttler/throttler.module';
 import { RedisModule } from './module/redis/redis.module';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { CustomThrottlerGuard } from './common/throttler/throttler.guard';
+import { AuditInterceptor } from './module/audit/interceptors/audit.interceptor';
 
 @Module({
   imports: [
@@ -48,6 +51,7 @@ import { CustomThrottlerGuard } from './common/throttler/throttler.guard';
     }),
     RedisModule,
     ConcessionModule,
+    AuditModule,
     ThrottlerModule,
     RoleModule,
     UserModule,
@@ -67,11 +71,16 @@ import { CustomThrottlerGuard } from './common/throttler/throttler.guard';
     HolidayModule,
     PricingModule,
     TheaterAnalyticsModule,
+    RecommendationModule,
   ],
   providers: [
     {
       provide: APP_GUARD,
       useClass: CustomThrottlerGuard,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: AuditInterceptor,
     },
   ],
 })

@@ -1,6 +1,8 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Movie, MovieStatus } from './entity/movie.entity';
+import { Cast } from './entity/cast.entity';
+import { Crew, CrewRole } from './entity/crew.entity';
 import { Repository, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
 import { CreateMovieDto } from './dto/create-movie.dto';
 import { UpdateMovieDto } from './dto/update-movie.dto';
@@ -10,7 +12,11 @@ import * as xlsx from 'xlsx';
 export class MovieService {
     constructor(
         @InjectRepository(Movie)
-        private readonly movieRepo : Repository<Movie>
+        private readonly movieRepo : Repository<Movie>,
+        @InjectRepository(Cast)
+        private readonly castRepo : Repository<Cast>,
+        @InjectRepository(Crew)
+        private readonly crewRepo : Repository<Crew>
     ){}
 
     async createMovie(dto: CreateMovieDto){
@@ -21,31 +27,62 @@ export class MovieService {
             trailer: Array.isArray(dto.trailer) ? dto.trailer : dto.trailer ? [dto.trailer] : [],
             status: dto.status || MovieStatus.UPCOMING,
         };
-        const movie = this.movieRepo.create(movieData);
+        const { casts, crews, ...movieOnlyData } = movieData;
+        const movie = this.movieRepo.create(movieOnlyData);
+        const savedMovie = await this.movieRepo.save(movie);
+
+        // Save casts if provided
+        if (casts && casts.length > 0) {
+            const castEntities = casts.map(cast => 
+                this.castRepo.create({
+                    ...cast,
+                    movieId: savedMovie.id,
+                })
+            );
+            await this.castRepo.save(castEntities);
+        }
+
+        // Save crews if provided
+        if (crews && crews.length > 0) {
+            const crewEntities = crews.map(crew => 
+                this.crewRepo.create({
+                    ...crew,
+                    movieId: savedMovie.id,
+                })
+            );
+            await this.crewRepo.save(crewEntities);
+        }
+
+        // Fetch movie with relations
+        const movieWithRelations = await this.movieRepo.findOne({
+            where: { id: savedMovie.id },
+            relations: ['casts', 'crews']
+        });
+
         return {
             message : "your movie created successfully",
-            data : await this.movieRepo.save(movie)
+            data : movieWithRelations
         }
     }
     
     async findAllMovies(){
         return {
             message : "all movies fetched successfully",
-            data : await this.movieRepo.find()
+            data : await this.movieRepo.find({ relations: ['casts', 'crews'] })
         }
     }
 
     async findUpcomingMovies(){
         return {
             message : "upcoming movies fetched successfully",
-            data : await this.movieRepo.find({ where: { status: MovieStatus.UPCOMING } })
+            data : await this.movieRepo.find({ where: { status: MovieStatus.UPCOMING }, relations: ['casts', 'crews'] })
         }
     }
 
     async findRunningMovies(){
         return {
             message : "running movies fetched successfully",
-            data : await this.movieRepo.find({ where: { status: MovieStatus.RUNNING } })
+            data : await this.movieRepo.find({ where: { status: MovieStatus.RUNNING }, relations: ['casts', 'crews'] })
         }
     }
 
@@ -107,7 +144,10 @@ export class MovieService {
     }
 
     async findOneMovie(id: string){
-        const movie = await this.movieRepo.findOne({where : {id}});
+        const movie = await this.movieRepo.findOne({
+            where : {id},
+            relations: ['casts', 'crews']
+        });
 
         if(!movie){
             throw new NotFoundException("Movie not found")
@@ -119,15 +159,60 @@ export class MovieService {
     }
 
     async updateMovie(id : string, dto : UpdateMovieDto){
-        const movie = await this.movieRepo.findOne({where : {id}});
+        const movie = await this.movieRepo.findOne({
+            where : {id},
+            relations: ['casts', 'crews']
+        });
         if(!movie){
             throw new NotFoundException("Movie Not Found");
-        } 
-        Object.assign(movie, dto);
+        }
+
+        const { casts, crews, ...movieOnlyData } = dto;
+        Object.assign(movie, movieOnlyData);
+
+        // Handle casts update
+        if (casts !== undefined) {
+            // Delete existing casts
+            await this.castRepo.delete({ movieId: id });
+            // Create new casts
+            if (casts.length > 0) {
+                const castEntities = casts.map(cast => 
+                    this.castRepo.create({
+                        ...cast,
+                        movieId: id,
+                    })
+                );
+                await this.castRepo.save(castEntities);
+            }
+        }
+
+        // Handle crews update
+        if (crews !== undefined) {
+            // Delete existing crews
+            await this.crewRepo.delete({ movieId: id });
+            // Create new crews
+            if (crews.length > 0) {
+                const crewEntities = crews.map(crew => 
+                    this.crewRepo.create({
+                        ...crew,
+                        movieId: id,
+                    })
+                );
+                await this.crewRepo.save(crewEntities);
+            }
+        }
+
+        await this.movieRepo.save(movie);
+
+        // Fetch updated movie with relations
+        const updatedMovie = await this.movieRepo.findOne({
+            where: { id },
+            relations: ['casts', 'crews']
+        });
 
         return{
             message : "movie updated successfully",
-            data : await this.movieRepo.save(movie)
+            data : updatedMovie
         }
     }
 
@@ -205,6 +290,30 @@ export class MovieService {
 
                     const movie = this.movieRepo.create(movieData);
                     const savedMovie = await this.movieRepo.save(movie);
+
+                    // Handle casts if provided
+                    if (row.casts && Array.isArray(row.casts)) {
+                        const castEntities = row.casts.map((cast: any) => 
+                            this.castRepo.create({
+                                ...cast,
+                                movieId: savedMovie.id,
+                            })
+                        );
+                        await this.castRepo.save(castEntities);
+                    }
+
+                    // Handle crews if provided
+                    if (row.crews && Array.isArray(row.crews)) {
+                        const crewEntities = row.crews.map((crew: any) => 
+                            this.crewRepo.create({
+                                ...crew,
+                                movieId: savedMovie.id,
+                                role: crew.role || CrewRole.PRODUCER,
+                            })
+                        );
+                        await this.crewRepo.save(crewEntities);
+                    }
+
                     movies.push(savedMovie);
                 } catch (error) {
                     errors.push({

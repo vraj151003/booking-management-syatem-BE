@@ -8,6 +8,8 @@ import {
   Index,
 } from 'typeorm';
 import { Show } from '../../show/entity/show.entity';
+import { Cast } from './cast.entity';
+import { Crew } from './crew.entity';
 
 export enum MovieStatus {
   UPCOMING = 'UPCOMING',
@@ -71,4 +73,10 @@ export class Movie {
 
   @OneToMany(() => Show, show => show.movie)
   shows: Show[];
+
+  @OneToMany(() => Cast, cast => cast.movie)
+  casts: Cast[];
+
+  @OneToMany(() => Crew, crew => crew.movie)
+  crews: Crew[];
 }

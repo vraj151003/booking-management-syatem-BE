@@ -10,6 +10,7 @@ import { PaymentService } from '../payment/payment.service';
 import { NotificationService } from '../notification/notification.service';
 import { CouponService } from '../coupon/coupon.service';
 import { PricingService } from '../pricing/pricing.service';
+import { AuditService } from '../audit/audit.service';
 
 describe('BookingService', () => {
   let service: BookingService;
@@ -83,6 +84,15 @@ describe('BookingService', () => {
     calculateDynamicPricingForSeats: jest.fn(),
   };
 
+  const mockAuditService = {
+    logAdminAction: jest.fn(),
+    logBookingAction: jest.fn(),
+    createLog: jest.fn(),
+    findAll: jest.fn(),
+    findByEntity: jest.fn(),
+    findByUser: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -118,6 +128,10 @@ describe('BookingService', () => {
         {
           provide: PricingService,
           useValue: mockPricingService,
+        },
+        {
+          provide: AuditService,
+          useValue: mockAuditService,
         },
       ],
     }).compile();

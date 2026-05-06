@@ -9,8 +9,12 @@ import {
   ArrayNotEmpty,
   IsString as IsStringItem,
   IsEnum,
+  ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 import { MovieStatus } from '../entity/movie.entity';
+import { CreateCastDto } from './cast.dto';
+import { CreateCrewDto } from './crew.dto';
 
 export class CreateMovieDto {
   @ApiProperty()
@@ -62,4 +66,18 @@ export class CreateMovieDto {
   @IsOptional()
   @IsEnum(MovieStatus)
   status?: MovieStatus;
+
+  @ApiProperty({ type: [CreateCastDto], required: false })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateCastDto)
+  casts?: CreateCastDto[];
+
+  @ApiProperty({ type: [CreateCrewDto], required: false })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateCrewDto)
+  crews?: CreateCrewDto[];
 }

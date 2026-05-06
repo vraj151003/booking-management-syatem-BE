@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { BookingService } from './booking.service';
 import { BookingController } from './booking.controller';
 import { Booking } from './entity/booking.entity';
+import { AuditModule } from '../audit/audit.module';
 import { Show } from '../show/entity/show.entity';
 import { Seat } from '../seat/entity/seat.entity';
 import { User } from '../users/entity/user.entity';
@@ -20,6 +21,7 @@ import { PricingModule } from '../pricing/pricing.module';
     NotificationModule,
     CouponModule,
     PricingModule,
+    AuditModule,
   ],
   controllers: [BookingController],
   providers: [BookingService],

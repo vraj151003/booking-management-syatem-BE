@@ -15,11 +15,13 @@ import { Payment } from '../payment/entity/payment.entity';
 import { NotificationService } from '../notification/notification.service';
 import { CouponService } from '../coupon/coupon.service';
 import { PricingService } from '../pricing/pricing.service';
+import { AuditService } from '../audit/audit.service';
 import * as puppeteer from 'puppeteer';
 import * as ejs from 'ejs';
 import * as path from 'path';
 import * as QRCode from 'qrcode';
 import * as csvWriter from 'csv-writer';
+import { AuditAction } from '../../common/constant';
 
 @Injectable()
 export class BookingService {
@@ -34,6 +36,7 @@ export class BookingService {
     private notificationService: NotificationService,
     private couponService: CouponService,
     private pricingService: PricingService,
+    private auditService: AuditService,
   ) {}
 
   async createBooking(dto: CreateBookingDto) {
@@ -151,6 +154,27 @@ export class BookingService {
 
       const savedBooking = await queryRunner.manager.save(booking);
 
+      // Log booking creation
+      try {
+        await this.auditService.logBookingAction(
+          dto.userId,
+          '', 
+          savedBooking.id,
+          AuditAction.BOOKING_CREATED,
+          undefined,
+          { 
+            showId: dto.showId, 
+            seatIds: dto.seatIds, 
+            totalAmount: finalAmountWithGST,
+            couponCode: dto.couponCode 
+          },
+          '', 
+          '', 
+        );
+      } catch (error) {
+        console.error('Failed to log booking creation:', error);
+      }
+
       // Create payment within the same transaction
       const payment = queryRunner.manager.create(Payment, {
         booking: savedBooking,
@@ -190,10 +214,29 @@ export class BookingService {
     if (!booking) {
       throw new Error('Booking not found');
     }
+    const oldStatus = booking.status;
+    const oldPaymentStatus = booking.paymentStatus;
+    
     booking.status = 'CONFIRMED';
     booking.paymentStatus = 'PAID';
 
     await this.bookingRepo.save(booking);
+
+    // Log booking confirmation
+    try {
+      await this.auditService.logBookingAction(
+        booking.user.id,
+        booking.user.email,
+        booking.id,
+        AuditAction.BOOKING_UPDATED,
+        { status: oldStatus, paymentStatus: oldPaymentStatus },
+        { status: 'CONFIRMED', paymentStatus: 'PAID' },
+        '', // IP address will be captured by interceptor
+        '', // User agent will be captured by interceptor
+      );
+    } catch (error) {
+      console.error('Failed to log booking confirmation:', error);
+    }
 
     // Increment coupon git if coupon was applied
     if (booking.couponId) {
@@ -307,14 +350,32 @@ export class BookingService {
   async cancelBooking(id: string) {
     const booking = await this.bookingRepo.findOne({
       where: { id },
+      relations: ['user'],
     });
 
     if (!booking) {
       throw new NotFoundException('Booking not found');
     }
 
+    const oldStatus = booking.status;
     booking.status = 'CANCELLED';
     await this.bookingRepo.save(booking);
+
+    // Log booking cancellation
+    try {
+      await this.auditService.logBookingAction(
+        booking.user.id,
+        booking.user.email,
+        booking.id,
+        AuditAction.BOOKING_CANCELLED,
+        { status: oldStatus },
+        { status: 'CANCELLED' },
+        '', // IP address will be captured by interceptor
+        '', // User agent will be captured by interceptor
+      );
+    } catch (error) {
+      console.error('Failed to log booking cancellation:', error);
+    }
 
     return {
       message: 'Booking cancelled successfully',

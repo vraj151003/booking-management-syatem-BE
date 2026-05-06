@@ -6,6 +6,7 @@ import {
   IsOptional,
   IsBoolean,
   IsEnum,
+  IsArray,
 } from 'class-validator';
 import { MovieStatus } from '../entity/movie.entity';
 
@@ -57,4 +58,24 @@ export class BulkUploadMovieDto {
   @IsOptional()
   @IsEnum(MovieStatus)
   status?: MovieStatus;
+
+  @ApiProperty({ type: [Object], required: false })
+  @IsOptional()
+  @IsArray()
+  casts?: Array<{
+    name: string;
+    character?: string;
+    image?: string;
+    order?: number;
+  }>;
+
+  @ApiProperty({ type: [Object], required: false })
+  @IsOptional()
+  @IsArray()
+  crews?: Array<{
+    name: string;
+    role: string;
+    image?: string;
+    order?: number;
+  }>;
 }
