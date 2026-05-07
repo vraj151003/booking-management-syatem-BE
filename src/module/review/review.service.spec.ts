@@ -204,15 +204,20 @@ describe('ReviewService', () => {
     it('should return all reviews ordered by createdAt DESC', async () => {
       // Arrange
       const reviews = [createMockReview(), { ...createMockReview(), id: 'review-456' }];
-      mockReviewRepo.find.mockResolvedValue(reviews);
+      const mockQueryBuilder = {
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue(reviews),
+      };
+      mockReviewRepo.createQueryBuilder.mockReturnValue(mockQueryBuilder);
 
       // Act
       const result = await service.findAllReviews();
 
       // Assert
-      expect(mockReviewRepo.find).toHaveBeenCalledWith({
-        order: { createdAt: 'DESC' },
-      });
+      expect(mockReviewRepo.createQueryBuilder).toHaveBeenCalledWith('review');
+      expect(mockQueryBuilder.orderBy).toHaveBeenCalledWith('review.createdAt', 'DESC');
+      expect(mockQueryBuilder.getMany).toHaveBeenCalled();
       expect(result).toEqual(reviews);
     });
   });
@@ -221,16 +226,22 @@ describe('ReviewService', () => {
     it('should return reviews by type', async () => {
       // Arrange
       const movieReviews = [createMockReview()];
-      mockReviewRepo.find.mockResolvedValue(movieReviews);
+      const mockQueryBuilder = {
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue(movieReviews),
+      };
+      mockReviewRepo.createQueryBuilder.mockReturnValue(mockQueryBuilder);
 
       // Act
       const result = await service.findReviewsByType(ReviewableType.MOVIE);
 
       // Assert
-      expect(mockReviewRepo.find).toHaveBeenCalledWith({
-        where: { reviewableType: ReviewableType.MOVIE },
-        order: { createdAt: 'DESC' },
-      });
+      expect(mockReviewRepo.createQueryBuilder).toHaveBeenCalledWith('review');
+      expect(mockQueryBuilder.where).toHaveBeenCalledWith('review.reviewableType = :type', { type: ReviewableType.MOVIE });
+      expect(mockQueryBuilder.orderBy).toHaveBeenCalledWith('review.createdAt', 'DESC');
+      expect(mockQueryBuilder.getMany).toHaveBeenCalled();
       expect(result).toEqual(movieReviews);
     });
   });
@@ -239,19 +250,23 @@ describe('ReviewService', () => {
     it('should return reviews for specific item', async () => {
       // Arrange
       const itemReviews = [createMockReview()];
-      mockReviewRepo.find.mockResolvedValue(itemReviews);
+      const mockQueryBuilder = {
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue(itemReviews),
+      };
+      mockReviewRepo.createQueryBuilder.mockReturnValue(mockQueryBuilder);
 
       // Act
       const result = await service.findReviewsByItem(ReviewableType.MOVIE, 'movie-123');
 
       // Assert
-      expect(mockReviewRepo.find).toHaveBeenCalledWith({
-        where: {
-          reviewableType: ReviewableType.MOVIE,
-          reviewableId: 'movie-123',
-        },
-        order: { createdAt: 'DESC' },
-      });
+      expect(mockReviewRepo.createQueryBuilder).toHaveBeenCalledWith('review');
+      expect(mockQueryBuilder.where).toHaveBeenCalledWith('review.reviewableType = :reviewableType', { reviewableType: ReviewableType.MOVIE });
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('review.reviewableId = :reviewableId', { reviewableId: 'movie-123' });
+      expect(mockQueryBuilder.orderBy).toHaveBeenCalledWith('review.createdAt', 'DESC');
+      expect(mockQueryBuilder.getMany).toHaveBeenCalled();
       expect(result).toEqual(itemReviews);
     });
   });
@@ -260,16 +275,22 @@ describe('ReviewService', () => {
     it('should return user reviews', async () => {
       // Arrange
       const userReviews = [createMockReview()];
-      mockReviewRepo.find.mockResolvedValue(userReviews);
+      const mockQueryBuilder = {
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue(userReviews),
+      };
+      mockReviewRepo.createQueryBuilder.mockReturnValue(mockQueryBuilder);
 
       // Act
       const result = await service.findUserReviews('user-123');
 
       // Assert
-      expect(mockReviewRepo.find).toHaveBeenCalledWith({
-        where: { userId: 'user-123' },
-        order: { createdAt: 'DESC' },
-      });
+      expect(mockReviewRepo.createQueryBuilder).toHaveBeenCalledWith('review');
+      expect(mockQueryBuilder.where).toHaveBeenCalledWith('review.userId = :userId', { userId: 'user-123' });
+      expect(mockQueryBuilder.orderBy).toHaveBeenCalledWith('review.createdAt', 'DESC');
+      expect(mockQueryBuilder.getMany).toHaveBeenCalled();
       expect(result).toEqual(userReviews);
     });
   });

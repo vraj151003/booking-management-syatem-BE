@@ -25,6 +25,12 @@ describe('HolidayService', () => {
     isActive: true,
   };
 
+  const mockQueryBuilder = {
+    andWhere: jest.fn().mockReturnThis(),
+    orderBy: jest.fn().mockReturnThis(),
+    getMany: jest.fn().mockResolvedValue([]),
+  };
+
   beforeEach(async () => {
     const mockRepository = {
       create: jest.fn(),
@@ -32,6 +38,7 @@ describe('HolidayService', () => {
       find: jest.fn(),
       findOne: jest.fn(),
       remove: jest.fn(),
+      createQueryBuilder: jest.fn().mockReturnValue(mockQueryBuilder),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -147,43 +154,43 @@ describe('HolidayService', () => {
   });
 
   describe('findAllHolidays', () => {
-    it('should return all active holidays ordered by date', async () => {
+    it('should return all holidays', async () => {
       // Arrange
       const holidays = [
-        { ...mockHoliday, date: '2024-01-01', name: 'New Year' },
         { ...mockHoliday, date: '2024-12-25', name: 'Christmas' },
+        { ...mockHoliday, date: '2024-01-01', name: 'New Year' },
       ];
-      holidayRepo.find.mockResolvedValue(holidays);
+      mockQueryBuilder.getMany.mockResolvedValue(holidays);
 
       // Act
       const result = await service.findAllHolidays();
 
       // Assert
       expect(result).toEqual(holidays);
-      expect(holidayRepo.find).toHaveBeenCalledWith({
-        where: { isActive: true },
-        order: { date: 'ASC' },
-      });
+      expect(holidayRepo.createQueryBuilder).toHaveBeenCalledWith('holiday');
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+        'holiday.isActive = :isActive',
+        { isActive: true }
+      );
+      expect(mockQueryBuilder.getMany).toHaveBeenCalled();
     });
 
     it('should return empty array when no holidays exist', async () => {
       // Arrange
-      holidayRepo.find.mockResolvedValue([]);
+      mockQueryBuilder.getMany.mockResolvedValue([]);
 
       // Act
       const result = await service.findAllHolidays();
 
       // Assert
       expect(result).toEqual([]);
-      expect(holidayRepo.find).toHaveBeenCalledWith({
-        where: { isActive: true },
-        order: { date: 'ASC' },
-      });
+      expect(holidayRepo.createQueryBuilder).toHaveBeenCalledWith('holiday');
+      expect(mockQueryBuilder.getMany).toHaveBeenCalled();
     });
 
     it('should handle repository find error', async () => {
       // Arrange
-      holidayRepo.find.mockRejectedValue(new Error('Database error'));
+      mockQueryBuilder.getMany.mockRejectedValue(new Error('Database error'));
 
       await expect(service.findAllHolidays()).rejects.toThrow('Database error');
     });
@@ -191,16 +198,18 @@ describe('HolidayService', () => {
     it('should not return inactive holidays', async () => {
       // Arrange
       const activeHoliday = { ...mockHoliday, isActive: true };
-      holidayRepo.find.mockResolvedValue([activeHoliday]);
+      mockQueryBuilder.getMany.mockResolvedValue([activeHoliday]);
 
       // Act
       const result = await service.findAllHolidays();
 
       // Assert
-      expect(holidayRepo.find).toHaveBeenCalledWith({
-        where: { isActive: true },
-        order: { date: 'ASC' },
-      });
+      expect(holidayRepo.createQueryBuilder).toHaveBeenCalledWith('holiday');
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+        'holiday.isActive = :isActive',
+        { isActive: true }
+      );
+      expect(mockQueryBuilder.getMany).toHaveBeenCalled();
     });
   });
 

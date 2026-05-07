@@ -315,10 +315,10 @@ describe('ConcessionController', () => {
         );
 
         // Act
-        const result = await controller.getConcessionsByTheater(theaterId);
+        const result = await controller.getConcessionsByTheater(theaterId, {});
 
         // Assert
-        expect(service.getConcessionsByTheater).toHaveBeenCalledWith(theaterId);
+        expect(service.getConcessionsByTheater).toHaveBeenCalledWith(theaterId, {});
         expect(result).toEqual({
           message: 'Concessions retrieved successfully',
           data: expectedConcessions,
@@ -331,7 +331,7 @@ describe('ConcessionController', () => {
         mockConcessionService.getConcessionsByTheater.mockResolvedValue([]);
 
         // Act
-        const result = await controller.getConcessionsByTheater(theaterId);
+        const result = await controller.getConcessionsByTheater(theaterId, {});
 
         // Assert
         expect(result.data).toEqual([]);
@@ -346,7 +346,7 @@ describe('ConcessionController', () => {
 
         // Act & Assert
         await expect(
-          controller.getConcessionsByTheater(theaterId),
+          controller.getConcessionsByTheater(theaterId, {}),
         ).rejects.toThrow();
       });
 
@@ -359,7 +359,7 @@ describe('ConcessionController', () => {
 
         // Act & Assert
         await expect(
-          controller.getConcessionsByTheater(theaterId),
+          controller.getConcessionsByTheater(theaterId, {}),
         ).rejects.toThrow();
       });
 
@@ -372,7 +372,7 @@ describe('ConcessionController', () => {
 
         // Act & Assert
         await expect(
-          controller.getConcessionsByTheater(theaterId),
+          controller.getConcessionsByTheater(theaterId, {}),
         ).rejects.toThrow('Database connection failed');
       });
     });
@@ -397,11 +397,12 @@ describe('ConcessionController', () => {
         );
 
         // Act
-        const result = await controller.getConcessionsByCategory(categoryId);
+        const result = await controller.getConcessionsByCategory(categoryId, {});
 
         // Assert
         expect(service.getConcessionsByCategory).toHaveBeenCalledWith(
           categoryId,
+          {},
         );
         expect(result).toEqual({
           message: 'Concessions retrieved successfully',
@@ -415,7 +416,7 @@ describe('ConcessionController', () => {
         mockConcessionService.getConcessionsByCategory.mockResolvedValue([]);
 
         // Act
-        const result = await controller.getConcessionsByCategory(categoryId);
+        const result = await controller.getConcessionsByCategory(categoryId, {});
 
         // Assert
         expect(result.data).toEqual([]);
@@ -430,7 +431,7 @@ describe('ConcessionController', () => {
 
         // Act & Assert
         await expect(
-          controller.getConcessionsByCategory(categoryId),
+          controller.getConcessionsByCategory(categoryId, {}),
         ).rejects.toThrow();
       });
 
@@ -443,7 +444,7 @@ describe('ConcessionController', () => {
 
         // Act & Assert
         await expect(
-          controller.getConcessionsByCategory(categoryId),
+          controller.getConcessionsByCategory(categoryId, {}),
         ).rejects.toThrow();
       });
 
@@ -453,7 +454,7 @@ describe('ConcessionController', () => {
         mockConcessionService.getConcessionsByCategory.mockResolvedValue([]);
 
         // Act
-        const result = await controller.getConcessionsByCategory(categoryId);
+        const result = await controller.getConcessionsByCategory(categoryId, {});
 
         // Assert
         expect(result.data).toEqual([]);
@@ -468,7 +469,7 @@ describe('ConcessionController', () => {
 
         // Act & Assert
         await expect(
-          controller.getConcessionsByCategory(categoryId),
+          controller.getConcessionsByCategory(categoryId, {}),
         ).rejects.toThrow();
       });
     });
@@ -848,10 +849,10 @@ describe('ConcessionController', () => {
         );
 
         // Act
-        const result = await controller.getCategories();
+        const result = await controller.getCategories({});
 
         // Assert
-        expect(service.getCategories).toHaveBeenCalled();
+        expect(service.getCategories).toHaveBeenCalledWith({});
         expect(result).toEqual({
           message: 'Categories retrieved successfully',
           data: expectedCategories,
@@ -863,7 +864,7 @@ describe('ConcessionController', () => {
         mockConcessionService.getCategories.mockResolvedValue([]);
 
         // Act
-        const result = await controller.getCategories();
+        const result = await controller.getCategories({});
 
         // Assert
         expect(result.data).toEqual([]);
@@ -876,7 +877,7 @@ describe('ConcessionController', () => {
         );
 
         // Act & Assert
-        await expect(controller.getCategories()).rejects.toThrow();
+        await expect(controller.getCategories({})).rejects.toThrow();
       });
     });
 
@@ -1338,10 +1339,10 @@ describe('ConcessionController', () => {
         );
 
         // Act
-        const result = await controller.getOrdersByUser(userId);
+        const result = await controller.getOrdersByUser(userId, {});
 
         // Assert
-        expect(service.getConcessionOrdersByUser).toHaveBeenCalledWith(userId);
+        expect(service.getConcessionOrdersByUser).toHaveBeenCalledWith(userId, {});
         expect(result).toEqual({
           message: 'Orders retrieved successfully',
           data: expectedOrders,
@@ -1354,7 +1355,7 @@ describe('ConcessionController', () => {
         mockConcessionService.getConcessionOrdersByUser.mockResolvedValue([]);
 
         // Act
-        const result = await controller.getOrdersByUser(userId);
+        const result = await controller.getOrdersByUser(userId, {});
 
         // Assert
         expect(result.data).toEqual([]);
@@ -1368,7 +1369,7 @@ describe('ConcessionController', () => {
         );
 
         // Act & Assert
-        await expect(controller.getOrdersByUser(userId)).rejects.toThrow();
+        await expect(controller.getOrdersByUser(userId, {})).rejects.toThrow();
       });
 
       it('should handle service errors', async () => {
@@ -1379,7 +1380,7 @@ describe('ConcessionController', () => {
         );
 
         // Act & Assert
-        await expect(controller.getOrdersByUser(userId)).rejects.toThrow();
+        await expect(controller.getOrdersByUser(userId, {})).rejects.toThrow();
       });
     });
 
@@ -1401,11 +1402,12 @@ describe('ConcessionController', () => {
         );
 
         // Act
-        const result = await controller.getOrdersByBooking(bookingId);
+        const result = await controller.getOrdersByBooking(bookingId, {});
 
         // Assert
         expect(service.getConcessionOrdersByBooking).toHaveBeenCalledWith(
           bookingId,
+          {},
         );
         expect(result).toEqual({
           message: 'Orders retrieved successfully',
@@ -1419,7 +1421,7 @@ describe('ConcessionController', () => {
         mockConcessionService.getConcessionOrdersByBooking.mockResolvedValue([]);
 
         // Act
-        const result = await controller.getOrdersByBooking(bookingId);
+        const result = await controller.getOrdersByBooking(bookingId, {});
 
         // Assert
         expect(result.data).toEqual([]);
@@ -1434,7 +1436,7 @@ describe('ConcessionController', () => {
 
         // Act & Assert
         await expect(
-          controller.getOrdersByBooking(bookingId),
+          controller.getOrdersByBooking(bookingId, {}),
         ).rejects.toThrow();
       });
 
@@ -1447,7 +1449,7 @@ describe('ConcessionController', () => {
 
         // Act & Assert
         await expect(
-          controller.getOrdersByBooking(bookingId),
+          controller.getOrdersByBooking(bookingId, {}),
         ).rejects.toThrow();
       });
     });

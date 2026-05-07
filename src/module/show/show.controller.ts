@@ -6,10 +6,12 @@ import {
   Param,
   Body,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { ShowService } from './show.service';
 import { CreateShowDto } from './dto/create-show.dto';
-import { ApiTags, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { ShowFilterDto } from './dto/show-filter.dto';
+import { ApiTags, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { RequirePermissions } from '../permission/decorators/permissions.decorator';
 import { PermissionsGuard } from '../permission/guards/permission.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -31,8 +33,19 @@ export class ShowController {
   @Get()
   @RequirePermissions('READ_SHOW')
   @ApiResponse({ status: 200, description: 'Shows fetched' })
-  findAll() {
-    return this.showService.findAll();
+  @ApiQuery({ name: 'search', required: false })
+  @ApiQuery({ name: 'movieId', required: false })
+  @ApiQuery({ name: 'screenId', required: false })
+  @ApiQuery({ name: 'theaterId', required: false })
+  @ApiQuery({ name: 'isActive', required: false })
+  @ApiQuery({ name: 'startDate', required: false })
+  @ApiQuery({ name: 'endDate', required: false })
+  @ApiQuery({ name: 'startTime', required: false })
+  @ApiQuery({ name: 'endTime', required: false })
+  @ApiQuery({ name: 'minPrice', required: false })
+  @ApiQuery({ name: 'maxPrice', required: false })
+  findAll(@Query() filters: ShowFilterDto) {
+    return this.showService.findAll(filters);
   }
 
   @Get(':id')

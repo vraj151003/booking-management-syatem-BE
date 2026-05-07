@@ -1,7 +1,8 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, Query } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { HolidayService } from './holiday.service';
 import { CreateHolidayDto } from './dto/create-holiday-dto';
+import { HolidayFilterDto } from './dto/holiday-filter.dto';
 import { Holiday } from './entity/holiday.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../permission/guards/permission.guard';
@@ -25,11 +26,15 @@ export class HolidayController {
 
   @Get()
   @RequirePermissions('READ_HOLIDAY')
-  @ApiOperation({ summary: 'Get all active holidays' })
+  @ApiOperation({ summary: 'Get all holidays with filters' })
   @ApiResponse({ status: 200, type: [Holiday] })
   @ApiResponse({ status: 403, description: 'Forbidden - insufficient permissions' })
-  async findAll(): Promise<Holiday[]> {
-    return await this.holidayService.findAllHolidays();
+  @ApiQuery({ name: 'search', required: false })
+  @ApiQuery({ name: 'startDate', required: false })
+  @ApiQuery({ name: 'endDate', required: false })
+  @ApiQuery({ name: 'isActive', required: false })
+  async findAll(@Query() filters: HolidayFilterDto): Promise<Holiday[]> {
+    return await this.holidayService.findAllHolidays(filters);
   }
 
   @Get(':id')

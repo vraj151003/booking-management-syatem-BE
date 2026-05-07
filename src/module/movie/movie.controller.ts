@@ -1,9 +1,10 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, UseGuards, UseInterceptors, UploadedFile, Res } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, UseGuards, UseInterceptors, UploadedFile, Res, Query } from '@nestjs/common';
 import { MovieModule } from './movie.module';
 import { MovieService } from './movie.service';
-import { ApiResponse, ApiTags, ApiBearerAuth, ApiOperation, ApiConsumes, ApiBody } from '@nestjs/swagger';
+import { ApiResponse, ApiTags, ApiBearerAuth, ApiOperation, ApiConsumes, ApiBody, ApiQuery } from '@nestjs/swagger';
 import { CreateMovieDto } from './dto/create-movie.dto';
 import { UpdateMovieDto } from './dto/update-movie.dto';
+import { MovieFilterDto } from './dto/movie-filter.dto';
 import { RequirePermissions } from '../permission/decorators/permissions.decorator';
 import { PermissionsGuard } from '../permission/guards/permission.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -28,26 +29,57 @@ export class MovieController {
 
     @Get()
     @RequirePermissions('MANAGE_MOVIE')
-    @ApiOperation({ summary: 'Get all movies' })
+    @ApiOperation({ summary: 'Get all movies with filters' })
     @ApiResponse({ status: 200, description: 'Movies retrieved' })
-    getMovies() {
-        return this.movieService.findAllMovies();
+    @ApiQuery({ name: 'search', required: false })
+    @ApiQuery({ name: 'status', required: false })
+    @ApiQuery({ name: 'genre', required: false })
+    @ApiQuery({ name: 'language', required: false })
+    @ApiQuery({ name: 'minRating', required: false })
+    @ApiQuery({ name: 'maxRating', required: false })
+    @ApiQuery({ name: 'startDate', required: false })
+    @ApiQuery({ name: 'endDate', required: false })
+    @ApiQuery({ name: 'isActive', required: false })
+    @ApiQuery({ name: 'castNames', required: false })
+    @ApiQuery({ name: 'crewNames', required: false })
+    getMovies(@Query() filters: MovieFilterDto) {
+        return this.movieService.findAllMovies(filters);
     }
 
     @Get('upcoming/all')
     @RequirePermissions('MANAGE_MOVIE')
-    @ApiOperation({ summary: 'Get all upcoming movies' })
+    @ApiOperation({ summary: 'Get all upcoming movies with filters' })
     @ApiResponse({ status: 200, description: 'Upcoming movies retrieved' })
-    getUpcomingMovies() {
-        return this.movieService.findUpcomingMovies();
+    @ApiQuery({ name: 'search', required: false })
+    @ApiQuery({ name: 'genre', required: false })
+    @ApiQuery({ name: 'language', required: false })
+    @ApiQuery({ name: 'minRating', required: false })
+    @ApiQuery({ name: 'maxRating', required: false })
+    @ApiQuery({ name: 'startDate', required: false })
+    @ApiQuery({ name: 'endDate', required: false })
+    @ApiQuery({ name: 'isActive', required: false })
+    @ApiQuery({ name: 'castNames', required: false })
+    @ApiQuery({ name: 'crewNames', required: false })
+    getUpcomingMovies(@Query() filters: MovieFilterDto) {
+        return this.movieService.findUpcomingMovies(filters);
     }
 
     @Get('running/all')
     @RequirePermissions('MANAGE_MOVIE')
-    @ApiOperation({ summary: 'Get all currently running movies' })
+    @ApiOperation({ summary: 'Get all currently running movies with filters' })
     @ApiResponse({ status: 200, description: 'Running movies retrieved' })
-    getRunningMovies() {
-        return this.movieService.findRunningMovies();
+    @ApiQuery({ name: 'search', required: false })
+    @ApiQuery({ name: 'genre', required: false })
+    @ApiQuery({ name: 'language', required: false })
+    @ApiQuery({ name: 'minRating', required: false })
+    @ApiQuery({ name: 'maxRating', required: false })
+    @ApiQuery({ name: 'startDate', required: false })
+    @ApiQuery({ name: 'endDate', required: false })
+    @ApiQuery({ name: 'isActive', required: false })
+    @ApiQuery({ name: 'castNames', required: false })
+    @ApiQuery({ name: 'crewNames', required: false })
+    getRunningMovies(@Query() filters: MovieFilterDto) {
+        return this.movieService.findRunningMovies(filters);
     }
 
     @Get('trending')

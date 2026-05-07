@@ -9,6 +9,7 @@ import { Repository } from 'typeorm';
 import { Review, ReviewableType } from './entity/review.entity';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { UpdateReviewDto } from './dto/update-review.dto';
+import { ReviewFilterDto } from './dto/review-filter.dto';
 import { Booking } from '../booking/entity/booking.entity';
 import { Show } from '../show/entity/show.entity';
 import { Screen } from '../screen/entity/screen.entity';
@@ -97,37 +98,206 @@ export class ReviewService {
     return await this.reviewRepo.save(review);
   }
 
-  async findAllReviews() {
-    return await this.reviewRepo.find({
-      order: { createdAt: 'DESC' },
-    });
+  async findAllReviews(filters?: ReviewFilterDto) {
+    const queryBuilder = this.reviewRepo.createQueryBuilder('review');
+
+    // Apply search filter
+    if (filters?.search) {
+      queryBuilder.andWhere(
+        '(LOWER(review.comment) LIKE LOWER(:search))',
+        { search: `%${filters.search}%` }
+      );
+    }
+
+    // Apply reviewable type filter
+    if (filters?.reviewableType) {
+      queryBuilder.andWhere('review.reviewableType = :reviewableType', { reviewableType: filters.reviewableType });
+    }
+
+    // Apply reviewable ID filter
+    if (filters?.reviewableId) {
+      queryBuilder.andWhere('review.reviewableId = :reviewableId', { reviewableId: filters.reviewableId });
+    }
+
+    // Apply user filter
+    if (filters?.userId) {
+      queryBuilder.andWhere('review.userId = :userId', { userId: filters.userId });
+    }
+
+    // Apply user IDs filter
+    if (filters?.userIds && filters.userIds.length > 0) {
+      queryBuilder.andWhere('review.userId IN (:...userIds)', { userIds: filters.userIds });
+    }
+
+    // Apply rating filters
+    if (filters?.minRating) {
+      queryBuilder.andWhere('review.rating >= :minRating', { minRating: filters.minRating });
+    }
+
+    if (filters?.maxRating) {
+      queryBuilder.andWhere('review.rating <= :maxRating', { maxRating: filters.maxRating });
+    }
+
+    // Apply date range filter
+    if (filters?.startDate) {
+      queryBuilder.andWhere('review.createdAt >= :startDate', { startDate: new Date(filters.startDate) });
+    }
+
+    if (filters?.endDate) {
+      const endDate = new Date(filters.endDate);
+      endDate.setHours(23, 59, 59);
+      queryBuilder.andWhere('review.createdAt <= :endDate', { endDate });
+    }
+
+    return await queryBuilder.orderBy('review.createdAt', 'DESC').getMany();
   }
 
-  async findReviewsByType(type: ReviewableType) {
-    return await this.reviewRepo.find({
-      where: { reviewableType: type },
-      order: { createdAt: 'DESC' },
-    });
+  async findReviewsByType(type: ReviewableType, filters?: ReviewFilterDto) {
+    const queryBuilder = this.reviewRepo
+      .createQueryBuilder('review')
+      .where('review.reviewableType = :type', { type });
+
+    // Apply search filter
+    if (filters?.search) {
+      queryBuilder.andWhere(
+        '(LOWER(review.comment) LIKE LOWER(:search))',
+        { search: `%${filters.search}%` }
+      );
+    }
+
+    // Apply reviewable ID filter
+    if (filters?.reviewableId) {
+      queryBuilder.andWhere('review.reviewableId = :reviewableId', { reviewableId: filters.reviewableId });
+    }
+
+    // Apply user filter
+    if (filters?.userId) {
+      queryBuilder.andWhere('review.userId = :userId', { userId: filters.userId });
+    }
+
+    // Apply user IDs filter
+    if (filters?.userIds && filters.userIds.length > 0) {
+      queryBuilder.andWhere('review.userId IN (:...userIds)', { userIds: filters.userIds });
+    }
+
+    // Apply rating filters
+    if (filters?.minRating) {
+      queryBuilder.andWhere('review.rating >= :minRating', { minRating: filters.minRating });
+    }
+
+    if (filters?.maxRating) {
+      queryBuilder.andWhere('review.rating <= :maxRating', { maxRating: filters.maxRating });
+    }
+
+    // Apply date range filter
+    if (filters?.startDate) {
+      queryBuilder.andWhere('review.createdAt >= :startDate', { startDate: new Date(filters.startDate) });
+    }
+
+    if (filters?.endDate) {
+      const endDate = new Date(filters.endDate);
+      endDate.setHours(23, 59, 59);
+      queryBuilder.andWhere('review.createdAt <= :endDate', { endDate });
+    }
+
+    return await queryBuilder.orderBy('review.createdAt', 'DESC').getMany();
   }
 
   async findReviewsByItem(
     reviewableType: ReviewableType,
     reviewableId: string,
+    filters?: ReviewFilterDto
   ) {
-    return await this.reviewRepo.find({
-      where: {
-        reviewableType,
-        reviewableId,
-      },
-      order: { createdAt: 'DESC' },
-    });
+    const queryBuilder = this.reviewRepo
+      .createQueryBuilder('review')
+      .where('review.reviewableType = :reviewableType', { reviewableType })
+      .andWhere('review.reviewableId = :reviewableId', { reviewableId });
+
+    // Apply search filter
+    if (filters?.search) {
+      queryBuilder.andWhere(
+        '(LOWER(review.comment) LIKE LOWER(:search))',
+        { search: `%${filters.search}%` }
+      );
+    }
+
+    // Apply user filter
+    if (filters?.userId) {
+      queryBuilder.andWhere('review.userId = :userId', { userId: filters.userId });
+    }
+
+    // Apply user IDs filter
+    if (filters?.userIds && filters.userIds.length > 0) {
+      queryBuilder.andWhere('review.userId IN (:...userIds)', { userIds: filters.userIds });
+    }
+
+    // Apply rating filters
+    if (filters?.minRating) {
+      queryBuilder.andWhere('review.rating >= :minRating', { minRating: filters.minRating });
+    }
+
+    if (filters?.maxRating) {
+      queryBuilder.andWhere('review.rating <= :maxRating', { maxRating: filters.maxRating });
+    }
+
+    // Apply date range filter
+    if (filters?.startDate) {
+      queryBuilder.andWhere('review.createdAt >= :startDate', { startDate: new Date(filters.startDate) });
+    }
+
+    if (filters?.endDate) {
+      const endDate = new Date(filters.endDate);
+      endDate.setHours(23, 59, 59);
+      queryBuilder.andWhere('review.createdAt <= :endDate', { endDate });
+    }
+
+    return await queryBuilder.orderBy('review.createdAt', 'DESC').getMany();
   }
 
-  async findUserReviews(userId: string) {
-    return await this.reviewRepo.find({
-      where: { userId },
-      order: { createdAt: 'DESC' },
-    });
+  async findUserReviews(userId: string, filters?: ReviewFilterDto) {
+    const queryBuilder = this.reviewRepo
+      .createQueryBuilder('review')
+      .where('review.userId = :userId', { userId });
+
+    // Apply search filter
+    if (filters?.search) {
+      queryBuilder.andWhere(
+        '(LOWER(review.comment) LIKE LOWER(:search))',
+        { search: `%${filters.search}%` }
+      );
+    }
+
+    // Apply reviewable type filter
+    if (filters?.reviewableType) {
+      queryBuilder.andWhere('review.reviewableType = :reviewableType', { reviewableType: filters.reviewableType });
+    }
+
+    // Apply reviewable ID filter
+    if (filters?.reviewableId) {
+      queryBuilder.andWhere('review.reviewableId = :reviewableId', { reviewableId: filters.reviewableId });
+    }
+
+    // Apply rating filters
+    if (filters?.minRating) {
+      queryBuilder.andWhere('review.rating >= :minRating', { minRating: filters.minRating });
+    }
+
+    if (filters?.maxRating) {
+      queryBuilder.andWhere('review.rating <= :maxRating', { maxRating: filters.maxRating });
+    }
+
+    // Apply date range filter
+    if (filters?.startDate) {
+      queryBuilder.andWhere('review.createdAt >= :startDate', { startDate: new Date(filters.startDate) });
+    }
+
+    if (filters?.endDate) {
+      const endDate = new Date(filters.endDate);
+      endDate.setHours(23, 59, 59);
+      queryBuilder.andWhere('review.createdAt <= :endDate', { endDate });
+    }
+
+    return await queryBuilder.orderBy('review.createdAt', 'DESC').getMany();
   }
 
   async findOneReview(id: string) {

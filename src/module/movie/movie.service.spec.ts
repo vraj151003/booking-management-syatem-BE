@@ -4,6 +4,8 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MovieService } from './movie.service';
 import { Movie, MovieStatus } from './entity/movie.entity';
+import { Cast } from './entity/cast.entity';
+import { Crew } from './entity/crew.entity';
 import { CreateMovieDto } from './dto/create-movie.dto';
 import { UpdateMovieDto } from './dto/update-movie.dto';
 
@@ -27,38 +29,53 @@ describe('MovieService', () => {
     createdAt: new Date(),
     updatedAt: new Date(),
     shows: [],
-  };
-
-  const mockMovieRepo = {
-    create: jest.fn(),
-    save: jest.fn(),
-    find: jest.fn(),
-    findOne: jest.fn(),
-    remove: jest.fn(),
-    createQueryBuilder: jest.fn(),
+    casts: [],
+    crews: [],
   };
 
   const mockQueryBuilder = {
-    leftJoin: jest.fn().mockReturnThis(),
-    innerJoin: jest.fn().mockReturnThis(),
-    select: jest.fn().mockReturnThis(),
-    where: jest.fn().mockReturnThis(),
-    andWhere: jest.fn().mockReturnThis(),
-    groupBy: jest.fn().mockReturnThis(),
-    orderBy: jest.fn().mockReturnThis(),
-    addOrderBy: jest.fn().mockReturnThis(),
-    limit: jest.fn().mockReturnThis(),
-    getRawMany: jest.fn(),
-  };
+  leftJoinAndSelect: jest.fn().mockReturnThis(),
+  leftJoin: jest.fn().mockReturnThis(),
+  innerJoin: jest.fn().mockReturnThis(),
+  select: jest.fn().mockReturnThis(),
+  where: jest.fn().mockReturnThis(),
+  andWhere: jest.fn().mockReturnThis(),
+  groupBy: jest.fn().mockReturnThis(),
+  orderBy: jest.fn().mockReturnThis(),
+  addOrderBy: jest.fn().mockReturnThis(),
+  limit: jest.fn().mockReturnThis(),
+  getRawMany: jest.fn().mockResolvedValue([]),
+  getMany: jest.fn().mockResolvedValue([mockMovie]),
+  skip: jest.fn().mockReturnThis(),
+  take: jest.fn().mockReturnThis(),
+};
+
+const mockMovieRepo = {
+  create: jest.fn(),
+  save: jest.fn(),
+  find: jest.fn(),
+  findOne: jest.fn(),
+  remove: jest.fn(),
+  createQueryBuilder: jest.fn().mockReturnValue(mockQueryBuilder),
+};
 
   beforeEach(async () => {
     mockMovieRepo.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+    
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         MovieService,
         {
           provide: getRepositoryToken(Movie),
           useValue: mockMovieRepo,
+        },
+        {
+          provide: getRepositoryToken(Cast),
+          useValue: {},
+        },
+        {
+          provide: getRepositoryToken(Crew),
+          useValue: {},
         },
       ],
     }).compile();
@@ -90,6 +107,7 @@ describe('MovieService', () => {
         };
         mockMovieRepo.create.mockReturnValue(mockMovie);
         mockMovieRepo.save.mockResolvedValue(mockMovie);
+        mockMovieRepo.findOne.mockResolvedValue(mockMovie);
 
         // Act
         const result = await service.createMovie(dto);
@@ -100,6 +118,10 @@ describe('MovieService', () => {
         expect(result.data).toEqual(mockMovie);
         expect(movieRepo.create).toHaveBeenCalled();
         expect(movieRepo.save).toHaveBeenCalledWith(mockMovie);
+        expect(movieRepo.findOne).toHaveBeenCalledWith({
+          where: { id: mockMovie.id },
+          relations: ['casts', 'crews']
+        });
       });
 
       it('should handle poster and trailer arrays', async () => {
@@ -192,7 +214,7 @@ describe('MovieService', () => {
     describe('Success cases', () => {
       it('should return all movies', async () => {
         // Arrange
-        mockMovieRepo.find.mockResolvedValue([mockMovie]);
+        mockQueryBuilder.getMany.mockResolvedValue([mockMovie]);
 
         // Act
         const result = await service.findAllMovies();
@@ -201,25 +223,30 @@ describe('MovieService', () => {
         expect(result).toHaveProperty('message');
         expect(result).toHaveProperty('data');
         expect(result.data).toEqual([mockMovie]);
-        expect(movieRepo.find).toHaveBeenCalled();
+        expect(mockMovieRepo.createQueryBuilder).toHaveBeenCalledWith('movie');
+        expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith('movie.casts', 'casts');
+        expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith('movie.crews', 'crews');
+        expect(mockQueryBuilder.getMany).toHaveBeenCalled();
       });
 
       it('should return empty array when no movies exist', async () => {
         // Arrange
-        mockMovieRepo.find.mockResolvedValue([]);
+        mockQueryBuilder.getMany.mockResolvedValue([]);
 
         // Act
         const result = await service.findAllMovies();
 
         // Assert
         expect(result.data).toEqual([]);
+        expect(mockMovieRepo.createQueryBuilder).toHaveBeenCalledWith('movie');
+        expect(mockQueryBuilder.getMany).toHaveBeenCalled();
       });
     });
 
     describe('Edge cases', () => {
       it('should handle repository errors', async () => {
         // Arrange
-        mockMovieRepo.find.mockRejectedValue(new Error('Database error'));
+        mockQueryBuilder.getMany.mockRejectedValue(new Error('Database error'));
 
         // Act & Assert
         await expect(service.findAllMovies()).rejects.toThrow('Database error');
@@ -232,7 +259,7 @@ describe('MovieService', () => {
       it('should return all upcoming movies', async () => {
         // Arrange
         const upcomingMovie = { ...mockMovie, status: MovieStatus.UPCOMING };
-        mockMovieRepo.find.mockResolvedValue([upcomingMovie]);
+        mockQueryBuilder.getMany.mockResolvedValue([upcomingMovie]);
 
         // Act
         const result = await service.findUpcomingMovies();
@@ -241,26 +268,31 @@ describe('MovieService', () => {
         expect(result).toHaveProperty('message');
         expect(result).toHaveProperty('data');
         expect(result.data).toEqual([upcomingMovie]);
-        expect(movieRepo.find).toHaveBeenCalledWith({ where: { status: MovieStatus.UPCOMING } });
+        expect(mockMovieRepo.createQueryBuilder).toHaveBeenCalledWith('movie');
+        expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith('movie.casts', 'casts');
+        expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith('movie.crews', 'crews');
+        expect(mockQueryBuilder.where).toHaveBeenCalledWith('movie.status = :status', { status: MovieStatus.UPCOMING });
+        expect(mockQueryBuilder.getMany).toHaveBeenCalled();
       });
 
       it('should return empty array when no upcoming movies exist', async () => {
         // Arrange
-        mockMovieRepo.find.mockResolvedValue([]);
+        mockQueryBuilder.getMany.mockResolvedValue([]);
 
         // Act
         const result = await service.findUpcomingMovies();
 
         // Assert
         expect(result.data).toEqual([]);
-        expect(movieRepo.find).toHaveBeenCalledWith({ where: { status: MovieStatus.UPCOMING } });
+        expect(mockMovieRepo.createQueryBuilder).toHaveBeenCalledWith('movie');
+        expect(mockQueryBuilder.getMany).toHaveBeenCalled();
       });
     });
 
     describe('Edge cases', () => {
       it('should handle repository errors', async () => {
         // Arrange
-        mockMovieRepo.find.mockRejectedValue(new Error('Database error'));
+        mockQueryBuilder.getMany.mockRejectedValue(new Error('Database error'));
 
         // Act & Assert
         await expect(service.findUpcomingMovies()).rejects.toThrow('Database error');
@@ -273,7 +305,7 @@ describe('MovieService', () => {
       it('should return all running movies', async () => {
         // Arrange
         const runningMovie = { ...mockMovie, status: MovieStatus.RUNNING };
-        mockMovieRepo.find.mockResolvedValue([runningMovie]);
+        mockQueryBuilder.getMany.mockResolvedValue([runningMovie]);
 
         // Act
         const result = await service.findRunningMovies();
@@ -282,26 +314,31 @@ describe('MovieService', () => {
         expect(result).toHaveProperty('message');
         expect(result).toHaveProperty('data');
         expect(result.data).toEqual([runningMovie]);
-        expect(movieRepo.find).toHaveBeenCalledWith({ where: { status: MovieStatus.RUNNING } });
+        expect(mockMovieRepo.createQueryBuilder).toHaveBeenCalledWith('movie');
+        expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith('movie.casts', 'casts');
+        expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith('movie.crews', 'crews');
+        expect(mockQueryBuilder.where).toHaveBeenCalledWith('movie.status = :status', { status: MovieStatus.RUNNING });
+        expect(mockQueryBuilder.getMany).toHaveBeenCalled();
       });
 
       it('should return empty array when no running movies exist', async () => {
         // Arrange
-        mockMovieRepo.find.mockResolvedValue([]);
+        mockQueryBuilder.getMany.mockResolvedValue([]);
 
         // Act
         const result = await service.findRunningMovies();
 
         // Assert
         expect(result.data).toEqual([]);
-        expect(movieRepo.find).toHaveBeenCalledWith({ where: { status: MovieStatus.RUNNING } });
+        expect(mockMovieRepo.createQueryBuilder).toHaveBeenCalledWith('movie');
+        expect(mockQueryBuilder.getMany).toHaveBeenCalled();
       });
     });
 
     describe('Edge cases', () => {
       it('should handle repository errors', async () => {
         // Arrange
-        mockMovieRepo.find.mockRejectedValue(new Error('Database error'));
+        mockQueryBuilder.getMany.mockRejectedValue(new Error('Database error'));
 
         // Act & Assert
         await expect(service.findRunningMovies()).rejects.toThrow('Database error');
@@ -538,7 +575,10 @@ describe('MovieService', () => {
         expect(result).toHaveProperty('message');
         expect(result).toHaveProperty('data');
         expect(result.data).toEqual(mockMovie);
-        expect(movieRepo.findOne).toHaveBeenCalledWith({ where: { id: 'movie-1' } });
+        expect(movieRepo.findOne).toHaveBeenCalledWith({ 
+          where: { id: 'movie-1' },
+          relations: ['casts', 'crews']
+        });
       });
     });
 
@@ -586,7 +626,10 @@ describe('MovieService', () => {
         expect(result).toHaveProperty('message');
         expect(result).toHaveProperty('data');
         expect(result.data).toEqual(mockMovie);
-        expect(movieRepo.findOne).toHaveBeenCalledWith({ where: { id: 'movie-1' } });
+        expect(movieRepo.findOne).toHaveBeenCalledWith({ 
+          where: { id: 'movie-1' },
+          relations: ['casts', 'crews']
+        });
         expect(movieRepo.save).toHaveBeenCalledWith(mockMovie);
       });
     });

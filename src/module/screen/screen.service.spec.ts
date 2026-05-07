@@ -49,6 +49,8 @@ describe('ScreenService', () => {
     idProof: null as any,
     agreementDoc: null as any,
     adminVerified: false,
+    failedLoginAttempts: 0,
+    lockedUntil: null,
   };
 
   const mockScreen: Screen = {
@@ -68,12 +70,20 @@ describe('ScreenService', () => {
     screen: mockScreen,
   };
 
+  const mockQueryBuilder = {
+    leftJoinAndSelect: jest.fn().mockReturnThis(),
+    where: jest.fn().mockReturnThis(),
+    andWhere: jest.fn().mockReturnThis(),
+    getMany: jest.fn().mockResolvedValue([]),
+  };
+
   const mockScreenRepo = {
     findOne: jest.fn(),
     find: jest.fn(),
     create: jest.fn(),
     save: jest.fn(),
     remove: jest.fn(),
+    createQueryBuilder: jest.fn().mockReturnValue(mockQueryBuilder),
   };
 
   const mockUserRepo = {
@@ -388,7 +398,7 @@ describe('ScreenService', () => {
     describe('Success cases', () => {
       it('should return all screens with relations', async () => {
         // Arrange
-        mockScreenRepo.find.mockResolvedValue([mockScreen]);
+        mockQueryBuilder.getMany.mockResolvedValue([mockScreen]);
 
         // Act
         const result = await service.findAllScreen();
@@ -397,27 +407,30 @@ describe('ScreenService', () => {
         expect(result).toHaveProperty('message');
         expect(result).toHaveProperty('data');
         expect(result.data).toEqual([mockScreen]);
-        expect(screenRepo.find).toHaveBeenCalledWith({
-          relations: ['theaterOwner'],
-        });
+        expect(screenRepo.createQueryBuilder).toHaveBeenCalledWith('screen');
+        expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith('screen.theaterOwner', 'theaterOwner');
+        expect(mockQueryBuilder.getMany).toHaveBeenCalled();
       });
 
       it('should return empty array when no screens exist', async () => {
         // Arrange
-        mockScreenRepo.find.mockResolvedValue([]);
+        mockQueryBuilder.getMany.mockResolvedValue([]);
 
         // Act
         const result = await service.findAllScreen();
 
         // Assert
         expect(result.data).toEqual([]);
+        expect(screenRepo.createQueryBuilder).toHaveBeenCalledWith('screen');
+        expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith('screen.theaterOwner', 'theaterOwner');
+        expect(mockQueryBuilder.getMany).toHaveBeenCalled();
       });
     });
 
     describe('Edge cases', () => {
       it('should handle repository errors gracefully', async () => {
         // Arrange
-        mockScreenRepo.find.mockRejectedValue(new Error('Database error'));
+        mockQueryBuilder.getMany.mockRejectedValue(new Error('Database error'));
 
         // Act & Assert
         await expect(service.findAllScreen()).rejects.toThrow('Database error');

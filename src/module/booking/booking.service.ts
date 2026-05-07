@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { CreateBookingDto } from './dto/create-booking-dto';
 import { ExportBookingsDto, ExportFilterType } from './dto/export-bookings-dto';
+import { BookingFilterDto } from './dto/booking-filter.dto';
 import { Show } from '../show/entity/show.entity';
 import { Seat } from '../seat/entity/seat.entity';
 import { Booking } from './entity/booking.entity';
@@ -291,13 +292,77 @@ export class BookingService {
     };
   }
 
-  async findAllBookings() {
-    const bookings = await this.bookingRepo.find({
-      relations: ['user', 'show', 'show.movie', 'show.screen', 'seats'],
-    });
+  async findAllBookings(filters?: BookingFilterDto) {
+    const queryBuilder = this.bookingRepo
+      .createQueryBuilder('booking')
+      .leftJoinAndSelect('booking.user', 'user')
+      .leftJoinAndSelect('booking.show', 'show')
+      .leftJoinAndSelect('show.movie', 'movie')
+      .leftJoinAndSelect('show.screen', 'screen')
+      .leftJoinAndSelect('booking.seats', 'seats');
+
+    // Apply search filter
+    if (filters?.search) {
+      queryBuilder.andWhere(
+        `(LOWER(movie.name) LIKE LOWER(:search) OR 
+          LOWER(user.firstName) LIKE LOWER(:search) OR 
+          LOWER(user.lastName) LIKE LOWER(:search) OR 
+          LOWER(user.email) LIKE LOWER(:search) OR 
+          LOWER(screen.name) LIKE LOWER(:search))`,
+        { search: `%${filters.search}%` }
+      );
+    }
+
+    // Apply status filter
+    if (filters?.status) {
+      queryBuilder.andWhere('booking.status = :status', { status: filters.status });
+    }
+
+    // Apply payment status filter
+    if (filters?.paymentStatus) {
+      queryBuilder.andWhere('booking.paymentStatus = :paymentStatus', { paymentStatus: filters.paymentStatus });
+    }
+
+    // Apply movie filter
+    if (filters?.movieId) {
+      queryBuilder.andWhere('movie.id = :movieId', { movieId: filters.movieId });
+    }
+
+    // Apply screen filter
+    if (filters?.screenId) {
+      queryBuilder.andWhere('screen.id = :screenId', { screenId: filters.screenId });
+    }
+
+    // Apply theater owner filter
+    if (filters?.theaterOwnerId) {
+      queryBuilder.andWhere('screen.theaterOwnerId = :theaterOwnerId', { theaterOwnerId: filters.theaterOwnerId });
+    }
+
+    // Apply user filter
+    if (filters?.userId) {
+      queryBuilder.andWhere('user.id = :userId', { userId: filters.userId });
+    }
+
+    // Apply date range filter
+    if (filters?.startDate) {
+      queryBuilder.andWhere('booking.createdAt >= :startDate', { startDate: new Date(filters.startDate) });
+    }
+
+    if (filters?.endDate) {
+      const endDate = new Date(filters.endDate);
+      endDate.setHours(23, 59, 59);
+      queryBuilder.andWhere('booking.createdAt <= :endDate', { endDate });
+    }
+
+    // Apply seat types filter
+    if (filters?.seatTypes && filters.seatTypes.length > 0) {
+      queryBuilder.andWhere('seats.seatType IN (:...seatTypes)', { seatTypes: filters.seatTypes });
+    }
+
+    const bookings = await queryBuilder.getMany();
 
     return {
-      message: 'All bookings retrieved successfully',
+      message: 'Bookings retrieved successfully',
       data: bookings,
     };
   }

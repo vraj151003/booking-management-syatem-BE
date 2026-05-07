@@ -4,6 +4,7 @@ import { BookingService } from './booking.service';
 import { CreateBookingDto } from './dto/create-booking-dto';
 import { LockSeatsDto } from './dto/lock-seats-dto';
 import { ExportBookingsDto, ExportFilterType } from './dto/export-bookings-dto';
+import { BookingFilterDto } from './dto/booking-filter.dto';
 import { RequirePermissions } from '../permission/decorators/permissions.decorator';
 import { PermissionsGuard } from '../permission/guards/permission.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -37,10 +38,20 @@ export class BookingController {
 
   @Get()
   @RequirePermissions('MANAGE_BOOKING')
-  @ApiOperation({ summary: 'Get all bookings' })
+  @ApiOperation({ summary: 'Get all bookings with filters' })
   @ApiResponse({ status: 200, description: 'Bookings retrieved successfully' })
-  async findAll() {
-    return this.bookingService.findAllBookings();
+  @ApiQuery({ name: 'search', required: false })
+  @ApiQuery({ name: 'status', required: false })
+  @ApiQuery({ name: 'paymentStatus', required: false })
+  @ApiQuery({ name: 'movieId', required: false })
+  @ApiQuery({ name: 'screenId', required: false })
+  @ApiQuery({ name: 'theaterOwnerId', required: false })
+  @ApiQuery({ name: 'userId', required: false })
+  @ApiQuery({ name: 'startDate', required: false })
+  @ApiQuery({ name: 'endDate', required: false })
+  @ApiQuery({ name: 'seatTypes', required: false })
+  async findAll(@Query() filters: BookingFilterDto) {
+    return this.bookingService.findAllBookings(filters);
   }
 
   @Get(':id')

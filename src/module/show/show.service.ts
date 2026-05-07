@@ -11,6 +11,7 @@ import { Screen } from '../screen/entity/screen.entity';
 import { Seat } from '../seat/entity/seat.entity';
 import { Booking } from '../booking/entity/booking.entity';
 import { CreateShowDto } from './dto/create-show.dto';
+import { ShowFilterDto } from './dto/show-filter.dto';
 import messages from '../../common/config/message.json';
 import { BookingStatus } from '../../common/constant';
 
@@ -67,12 +68,76 @@ export class ShowService {
     };
   }
 
-  async findAll() {
+  async findAll(filters?: ShowFilterDto) {
+    const queryBuilder = this.showRepo
+      .createQueryBuilder('show')
+      .leftJoinAndSelect('show.movie', 'movie')
+      .leftJoinAndSelect('show.screen', 'screen');
+
+    // Apply search filter
+    if (filters?.search) {
+      queryBuilder.andWhere(
+        '(LOWER(movie.name) LIKE LOWER(:search) OR LOWER(screen.name) LIKE LOWER(:search))',
+        { search: `%${filters.search}%` }
+      );
+    }
+
+    // Apply movie filter
+    if (filters?.movieId) {
+      queryBuilder.andWhere('show.movieId = :movieId', { movieId: filters.movieId });
+    }
+
+    // Apply screen filter
+    if (filters?.screenId) {
+      queryBuilder.andWhere('show.screenId = :screenId', { screenId: filters.screenId });
+    }
+
+    // Apply theater filter
+    if (filters?.theaterId) {
+      queryBuilder.andWhere('screen.theaterId = :theaterId', { theaterId: filters.theaterId });
+    }
+
+    // Apply active status filter
+    if (filters?.isActive !== undefined) {
+      queryBuilder.andWhere('show.isActive = :isActive', { isActive: filters.isActive });
+    }
+
+    // Apply date range filter
+    if (filters?.startDate) {
+      queryBuilder.andWhere('show.showDate >= :startDate', { startDate: filters.startDate });
+    }
+
+    if (filters?.endDate) {
+      queryBuilder.andWhere('show.showDate <= :endDate', { endDate: filters.endDate });
+    }
+
+    // Apply time filters
+    if (filters?.startTime) {
+      queryBuilder.andWhere('show.startTime >= :startTime', { startTime: filters.startTime });
+    }
+
+    if (filters?.endTime) {
+      queryBuilder.andWhere('show.endTime <= :endTime', { endTime: filters.endTime });
+    }
+
+    // Apply price filters (JSON pricing)
+    if (filters?.minPrice) {
+      queryBuilder.andWhere(
+        'EXISTS (SELECT 1 FROM json_each(show.pricing) WHERE CAST(value AS INTEGER) >= :minPrice)',
+        { minPrice: filters.minPrice }
+      );
+    }
+
+    if (filters?.maxPrice) {
+      queryBuilder.andWhere(
+        'EXISTS (SELECT 1 FROM json_each(show.pricing) WHERE CAST(value AS INTEGER) <= :maxPrice)',
+        { maxPrice: filters.maxPrice }
+      );
+    }
+
     return {
       message: messages.messages.SHOW.GET_ALL,
-      data: await this.showRepo.find({
-        relations: ['movie', 'screen'],
-      }),
+      data: await queryBuilder.getMany(),
     };
   }
 

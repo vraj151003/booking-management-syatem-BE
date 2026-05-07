@@ -24,6 +24,13 @@ describe('ConcessionService', () => {
     findOne: jest.fn(),
     update: jest.fn(),
     increment: jest.fn(),
+    createQueryBuilder: jest.fn().mockReturnValue({
+      leftJoinAndSelect: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      getMany: jest.fn().mockResolvedValue([]),
+    }),
   };
 
   const mockCategoryRepo = {
@@ -32,6 +39,12 @@ describe('ConcessionService', () => {
     find: jest.fn(),
     findOne: jest.fn(),
     update: jest.fn(),
+    createQueryBuilder: jest.fn().mockReturnValue({
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      getMany: jest.fn().mockResolvedValue([]),
+    }),
   };
 
   const mockOrderRepo = {
@@ -39,11 +52,28 @@ describe('ConcessionService', () => {
     save: jest.fn(),
     find: jest.fn(),
     update: jest.fn(),
+    findOne: jest.fn(),
+    remove: jest.fn(),
+    createQueryBuilder: jest.fn().mockReturnValue({
+      leftJoinAndSelect: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      getMany: jest.fn().mockResolvedValue([]),
+    }),
   };
 
   const mockOrderItemRepo = {
     create: jest.fn(),
     save: jest.fn(),
+  };
+
+  const mockQueryBuilder = {
+    leftJoinAndSelect: jest.fn().mockReturnThis(),
+    where: jest.fn().mockReturnThis(),
+    andWhere: jest.fn().mockReturnThis(),
+    orderBy: jest.fn().mockReturnThis(),
+    getMany: jest.fn().mockResolvedValue([]),
   };
 
   beforeEach(async () => {
@@ -165,50 +195,56 @@ describe('ConcessionService', () => {
           },
         ];
 
-        mockConcessionRepo.find.mockResolvedValue(expectedConcessions);
+        mockConcessionRepo.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+        mockQueryBuilder.getMany.mockResolvedValue(expectedConcessions);
 
         // Act
         const result = await service.getConcessionsByTheater(theaterOwnerId);
 
         // Assert
-        expect(concessionRepo.find).toHaveBeenCalledWith({
-          where: { theaterOwner: { id: theaterOwnerId } },
-          relations: ['category'],
-        });
+        expect(concessionRepo.createQueryBuilder).toHaveBeenCalledWith('concession');
+        expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith('concession.category', 'category');
+        expect(mockQueryBuilder.where).toHaveBeenCalledWith('concession.theaterOwner.id = :theaterOwnerId', { theaterOwnerId });
         expect(result).toEqual(expectedConcessions);
       });
 
       it('should return empty array when no concessions found', async () => {
         // Arrange
         const theaterOwnerId = 'theater-123';
-        mockConcessionRepo.find.mockResolvedValue([]);
+        mockConcessionRepo.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+        mockQueryBuilder.getMany.mockResolvedValue([]);
 
         // Act
         const result = await service.getConcessionsByTheater(theaterOwnerId);
 
         // Assert
+        expect(concessionRepo.createQueryBuilder).toHaveBeenCalledWith('concession');
+        expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith('concession.category', 'category');
+        expect(mockQueryBuilder.where).toHaveBeenCalledWith('concession.theaterOwner.id = :theaterOwnerId', { theaterOwnerId });
         expect(result).toEqual([]);
       });
 
       it('should handle empty theater owner ID', async () => {
         // Arrange
         const theaterOwnerId = '';
-        mockConcessionRepo.find.mockResolvedValue([]);
+        mockConcessionRepo.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+        mockQueryBuilder.getMany.mockResolvedValue([]);
 
         // Act
         const result = await service.getConcessionsByTheater(theaterOwnerId);
 
         // Assert
-        expect(concessionRepo.find).toHaveBeenCalledWith({
-          where: { theaterOwner: { id: '' } },
-          relations: ['category'],
-        });
+        expect(concessionRepo.createQueryBuilder).toHaveBeenCalledWith('concession');
+        expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith('concession.category', 'category');
+        expect(mockQueryBuilder.where).toHaveBeenCalledWith('concession.theaterOwner.id = :theaterOwnerId', { theaterOwnerId: '' });
+        expect(result).toEqual([]);
       });
 
       it('should handle database errors', async () => {
         // Arrange
         const theaterOwnerId = 'theater-123';
-        mockConcessionRepo.find.mockRejectedValue(
+        mockConcessionRepo.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+        mockQueryBuilder.getMany.mockRejectedValue(
           new Error('Database error'),
         );
 
@@ -232,47 +268,56 @@ describe('ConcessionService', () => {
           },
         ];
 
-        mockConcessionRepo.find.mockResolvedValue(expectedConcessions);
+        mockConcessionRepo.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+        mockQueryBuilder.getMany.mockResolvedValue(expectedConcessions);
 
         // Act
         const result = await service.getConcessionsByCategory(categoryId);
 
         // Assert
-        expect(concessionRepo.find).toHaveBeenCalledWith({
-          where: { status: ConcessionStatus.ACTIVE },
-          relations: ['category'],
-        });
+        expect(concessionRepo.createQueryBuilder).toHaveBeenCalledWith('concession');
+        expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith('concession.category', 'category');
+        expect(mockQueryBuilder.where).toHaveBeenCalledWith('concession.categoryId = :categoryId', { categoryId });
         expect(result).toEqual(expectedConcessions);
       });
 
       it('should return empty array when no active concessions', async () => {
         // Arrange
         const categoryId = 1;
-        mockConcessionRepo.find.mockResolvedValue([]);
+        mockConcessionRepo.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+        mockQueryBuilder.getMany.mockResolvedValue([]);
 
         // Act
         const result = await service.getConcessionsByCategory(categoryId);
 
         // Assert
+        expect(concessionRepo.createQueryBuilder).toHaveBeenCalledWith('concession');
+        expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith('concession.category', 'category');
+        expect(mockQueryBuilder.where).toHaveBeenCalledWith('concession.categoryId = :categoryId', { categoryId });
         expect(result).toEqual([]);
       });
 
       it('should handle negative category ID', async () => {
         // Arrange
         const categoryId = -1;
-        mockConcessionRepo.find.mockResolvedValue([]);
+        mockConcessionRepo.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+        mockQueryBuilder.getMany.mockResolvedValue([]);
 
         // Act
         const result = await service.getConcessionsByCategory(categoryId);
 
         // Assert
+        expect(concessionRepo.createQueryBuilder).toHaveBeenCalledWith('concession');
+        expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith('concession.category', 'category');
+        expect(mockQueryBuilder.where).toHaveBeenCalledWith('concession.categoryId = :categoryId', { categoryId });
         expect(result).toEqual([]);
       });
 
       it('should handle database errors', async () => {
         // Arrange
         const categoryId = 1;
-        mockConcessionRepo.find.mockRejectedValue(
+        mockConcessionRepo.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+        mockQueryBuilder.getMany.mockRejectedValue(
           new Error('Database error'),
         );
 
@@ -601,7 +646,7 @@ describe('ConcessionService', () => {
 
   describe('Category Management', () => {
     describe('createCategory', () => {
-      it('should create category successfully', async () => {
+      it('should create a category successfully', async () => {
         // Arrange
         const name = 'Beverages';
         const description = 'Soft drinks and juices';
@@ -688,40 +733,45 @@ describe('ConcessionService', () => {
           { id: 2, name: 'Snacks', isActive: true, displayOrder: 2 },
         ];
 
-        mockCategoryRepo.find.mockResolvedValue(expectedCategories);
+        mockCategoryRepo.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+        mockQueryBuilder.getMany.mockResolvedValue(expectedCategories);
 
         // Act
         const result = await service.getCategories();
 
         // Assert
-        expect(categoryRepo.find).toHaveBeenCalledWith({
-          where: { isActive: true },
-          order: { displayOrder: 'ASC' },
-        });
+        expect(categoryRepo.createQueryBuilder).toHaveBeenCalledWith('category');
+        expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('category.isActive = :isActive', { isActive: true });
+        expect(mockQueryBuilder.orderBy).toHaveBeenCalledWith('category.displayOrder', 'ASC');
         expect(result).toEqual(expectedCategories);
       });
 
       it('should return empty array when no categories', async () => {
         // Arrange
-        mockCategoryRepo.find.mockResolvedValue([]);
+        mockCategoryRepo.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+        mockQueryBuilder.getMany.mockResolvedValue([]);
 
         // Act
         const result = await service.getCategories();
 
         // Assert
+        expect(categoryRepo.createQueryBuilder).toHaveBeenCalledWith('category');
+        expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('category.isActive = :isActive', { isActive: true });
+        expect(mockQueryBuilder.orderBy).toHaveBeenCalledWith('category.displayOrder', 'ASC');
         expect(result).toEqual([]);
       });
 
       it('should handle database errors', async () => {
         // Arrange
-        mockCategoryRepo.find.mockRejectedValue(
+        mockCategoryRepo.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+        mockQueryBuilder.getMany.mockRejectedValue(
           new Error('Database error'),
         );
 
         // Act & Assert
-        await expect(service.getCategories()).rejects.toThrow(
-          'Database error',
-        );
+        await expect(
+          service.getCategories(),
+        ).rejects.toThrow('Database error');
       });
     });
 
@@ -879,7 +929,6 @@ describe('ConcessionService', () => {
         );
       });
     });
-  });
 
   describe('Order Management', () => {
     describe('createConcessionOrder', () => {
@@ -1160,35 +1209,42 @@ describe('ConcessionService', () => {
           },
         ];
 
-        mockOrderRepo.find.mockResolvedValue(expectedOrders);
+        mockOrderRepo.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+        mockQueryBuilder.getMany.mockResolvedValue(expectedOrders);
 
         // Act
         const result = await service.getConcessionOrdersByUser(userId);
 
         // Assert
-        expect(orderRepo.find).toHaveBeenCalledWith({
-          where: { user: { id: userId } },
-          relations: ['orderItems', 'orderItems.concession'],
-        });
+        expect(orderRepo.createQueryBuilder).toHaveBeenCalledWith('order');
+        expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith('order.orderItems', 'orderItems');
+        expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith('orderItems.concession', 'concession');
+        expect(mockQueryBuilder.where).toHaveBeenCalledWith('order.user.id = :userId', { userId });
         expect(result).toEqual(expectedOrders);
       });
 
       it('should return empty array when no orders', async () => {
         // Arrange
         const userId = 'user-123';
-        mockOrderRepo.find.mockResolvedValue([]);
+        mockOrderRepo.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+        mockQueryBuilder.getMany.mockResolvedValue([]);
 
         // Act
         const result = await service.getConcessionOrdersByUser(userId);
 
         // Assert
+        expect(orderRepo.createQueryBuilder).toHaveBeenCalledWith('order');
+        expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith('order.orderItems', 'orderItems');
+        expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith('orderItems.concession', 'concession');
+        expect(mockQueryBuilder.where).toHaveBeenCalledWith('order.user.id = :userId', { userId });
         expect(result).toEqual([]);
       });
 
       it('should handle database errors', async () => {
         // Arrange
         const userId = 'user-123';
-        mockOrderRepo.find.mockRejectedValue(
+        mockOrderRepo.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+        mockQueryBuilder.getMany.mockRejectedValue(
           new Error('Database error'),
         );
 
@@ -1211,35 +1267,42 @@ describe('ConcessionService', () => {
           },
         ];
 
-        mockOrderRepo.find.mockResolvedValue(expectedOrders);
+        mockOrderRepo.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+        mockQueryBuilder.getMany.mockResolvedValue(expectedOrders);
 
         // Act
         const result = await service.getConcessionOrdersByBooking(bookingId);
 
         // Assert
-        expect(orderRepo.find).toHaveBeenCalledWith({
-          where: { booking: { id: bookingId } },
-          relations: ['orderItems', 'orderItems.concession'],
-        });
+        expect(orderRepo.createQueryBuilder).toHaveBeenCalledWith('order');
+        expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith('order.orderItems', 'orderItems');
+        expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith('orderItems.concession', 'concession');
+        expect(mockQueryBuilder.where).toHaveBeenCalledWith('order.booking.id = :bookingId', { bookingId });
         expect(result).toEqual(expectedOrders);
       });
 
       it('should return empty array when no orders', async () => {
         // Arrange
         const bookingId = 'booking-123';
-        mockOrderRepo.find.mockResolvedValue([]);
+        mockOrderRepo.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+        mockQueryBuilder.getMany.mockResolvedValue([]);
 
         // Act
         const result = await service.getConcessionOrdersByBooking(bookingId);
 
         // Assert
+        expect(orderRepo.createQueryBuilder).toHaveBeenCalledWith('order');
+        expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith('order.orderItems', 'orderItems');
+        expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith('orderItems.concession', 'concession');
+        expect(mockQueryBuilder.where).toHaveBeenCalledWith('order.booking.id = :bookingId', { bookingId });
         expect(result).toEqual([]);
       });
 
       it('should handle database errors', async () => {
         // Arrange
         const bookingId = 'booking-123';
-        mockOrderRepo.find.mockRejectedValue(
+        mockOrderRepo.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+        mockQueryBuilder.getMany.mockRejectedValue(
           new Error('Database error'),
         );
 
@@ -1373,5 +1436,6 @@ describe('ConcessionService', () => {
         expect(result).toBe(0);
       });
     });
+  });
   });
 });

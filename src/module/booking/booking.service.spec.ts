@@ -639,28 +639,44 @@ describe('BookingService', () => {
 
     it('should return all bookings', async () => {
       // Arrange
-      mockBookingRepo.find.mockResolvedValue(mockBookings);
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue(mockBookings),
+      };
+      mockBookingRepo.createQueryBuilder.mockReturnValue(mockQueryBuilder);
 
       // Act
       const result = await service.findAllBookings();
 
       // Assert
-      expect(result.message).toBe('All bookings retrieved successfully');
+      expect(result.message).toBe('Bookings retrieved successfully');
       expect(result.data).toEqual(mockBookings);
-      expect(mockBookingRepo.find).toHaveBeenCalledWith({
-        relations: ['user', 'show', 'show.movie', 'show.screen', 'seats'],
-      });
+      expect(mockBookingRepo.createQueryBuilder).toHaveBeenCalledWith('booking');
+      expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith('booking.user', 'user');
+      expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith('booking.show', 'show');
+      expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith('show.movie', 'movie');
+      expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith('show.screen', 'screen');
+      expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith('booking.seats', 'seats');
+      expect(mockQueryBuilder.getMany).toHaveBeenCalled();
     });
 
     it('should return empty array when no bookings exist', async () => {
       // Arrange
-      mockBookingRepo.find.mockResolvedValue([]);
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue([]),
+      };
+      mockBookingRepo.createQueryBuilder.mockReturnValue(mockQueryBuilder);
 
       // Act
       const result = await service.findAllBookings();
 
       // Assert
       expect(result.data).toEqual([]);
+      expect(mockBookingRepo.createQueryBuilder).toHaveBeenCalledWith('booking');
+      expect(mockQueryBuilder.getMany).toHaveBeenCalled();
     });
   });
 

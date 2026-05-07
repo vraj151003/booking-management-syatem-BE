@@ -6,6 +6,7 @@ import { Crew, CrewRole } from './entity/crew.entity';
 import { Repository, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
 import { CreateMovieDto } from './dto/create-movie.dto';
 import { UpdateMovieDto } from './dto/update-movie.dto';
+import { MovieFilterDto } from './dto/movie-filter.dto';
 import * as xlsx from 'xlsx';
 
 @Injectable()
@@ -65,24 +66,217 @@ export class MovieService {
         }
     }
     
-    async findAllMovies(){
+    async findAllMovies(filters?: MovieFilterDto){
+        const queryBuilder = this.movieRepo
+            .createQueryBuilder('movie')
+            .leftJoinAndSelect('movie.casts', 'casts')
+            .leftJoinAndSelect('movie.crews', 'crews');
+
+        // Apply search filter
+        if (filters?.search) {
+            queryBuilder.andWhere(
+                '(LOWER(movie.name) LIKE LOWER(:search) OR LOWER(movie.description) LIKE LOWER(:search))',
+                { search: `%${filters.search}%` }
+            );
+        }
+
+        // Apply status filter
+        if (filters?.status) {
+            queryBuilder.andWhere('movie.status = :status', { status: filters.status });
+        }
+
+        // Apply genre filter
+        if (filters?.genre) {
+            queryBuilder.andWhere('movie.genre = :genre', { genre: filters.genre });
+        }
+
+        // Apply language filter
+        if (filters?.language) {
+            queryBuilder.andWhere('movie.language = :language', { language: filters.language });
+        }
+
+        // Apply rating filters
+        if (filters?.minRating) {
+            queryBuilder.andWhere('movie.rating >= :minRating', { minRating: filters.minRating });
+        }
+
+        if (filters?.maxRating) {
+            queryBuilder.andWhere('movie.rating <= :maxRating', { maxRating: filters.maxRating });
+        }
+
+        // Apply date range filter
+        if (filters?.startDate) {
+            queryBuilder.andWhere('movie.releaseDate >= :startDate', { startDate: new Date(filters.startDate) });
+        }
+
+        if (filters?.endDate) {
+            queryBuilder.andWhere('movie.releaseDate <= :endDate', { endDate: new Date(filters.endDate) });
+        }
+
+        // Apply active status filter
+        if (filters?.isActive !== undefined) {
+            queryBuilder.andWhere('movie.isActive = :isActive', { isActive: filters.isActive });
+        }
+
+        // Apply cast names filter
+        if (filters?.castNames && filters.castNames.length > 0) {
+            queryBuilder.andWhere(
+                'EXISTS (SELECT 1 FROM casts WHERE casts.movieId = movie.id AND casts.name IN (:...castNames))',
+                { castNames: filters.castNames }
+            );
+        }
+
+        // Apply crew names filter
+        if (filters?.crewNames && filters.crewNames.length > 0) {
+            queryBuilder.andWhere(
+                'EXISTS (SELECT 1 FROM crews WHERE crews.movieId = movie.id AND crews.name IN (:...crewNames))',
+                { crewNames: filters.crewNames }
+            );
+        }
+
         return {
             message : "all movies fetched successfully",
-            data : await this.movieRepo.find({ relations: ['casts', 'crews'] })
+            data : await queryBuilder.getMany()
         }
     }
 
-    async findUpcomingMovies(){
+    async findUpcomingMovies(filters?: MovieFilterDto){
+        const queryBuilder = this.movieRepo
+            .createQueryBuilder('movie')
+            .leftJoinAndSelect('movie.casts', 'casts')
+            .leftJoinAndSelect('movie.crews', 'crews')
+            .where('movie.status = :status', { status: MovieStatus.UPCOMING });
+
+        // Apply search filter
+        if (filters?.search) {
+            queryBuilder.andWhere(
+                '(LOWER(movie.name) LIKE LOWER(:search) OR LOWER(movie.description) LIKE LOWER(:search))',
+                { search: `%${filters.search}%` }
+            );
+        }
+
+        // Apply genre filter
+        if (filters?.genre) {
+            queryBuilder.andWhere('movie.genre = :genre', { genre: filters.genre });
+        }
+
+        // Apply language filter
+        if (filters?.language) {
+            queryBuilder.andWhere('movie.language = :language', { language: filters.language });
+        }
+
+        // Apply rating filters
+        if (filters?.minRating) {
+            queryBuilder.andWhere('movie.rating >= :minRating', { minRating: filters.minRating });
+        }
+
+        if (filters?.maxRating) {
+            queryBuilder.andWhere('movie.rating <= :maxRating', { maxRating: filters.maxRating });
+        }
+
+        // Apply date range filter
+        if (filters?.startDate) {
+            queryBuilder.andWhere('movie.releaseDate >= :startDate', { startDate: new Date(filters.startDate) });
+        }
+
+        if (filters?.endDate) {
+            queryBuilder.andWhere('movie.releaseDate <= :endDate', { endDate: new Date(filters.endDate) });
+        }
+
+        // Apply active status filter
+        if (filters?.isActive !== undefined) {
+            queryBuilder.andWhere('movie.isActive = :isActive', { isActive: filters.isActive });
+        }
+
+        // Apply cast names filter
+        if (filters?.castNames && filters.castNames.length > 0) {
+            queryBuilder.andWhere(
+                'EXISTS (SELECT 1 FROM casts WHERE casts.movieId = movie.id AND casts.name IN (:...castNames))',
+                { castNames: filters.castNames }
+            );
+        }
+
+        // Apply crew names filter
+        if (filters?.crewNames && filters.crewNames.length > 0) {
+            queryBuilder.andWhere(
+                'EXISTS (SELECT 1 FROM crews WHERE crews.movieId = movie.id AND crews.name IN (:...crewNames))',
+                { crewNames: filters.crewNames }
+            );
+        }
+
         return {
             message : "upcoming movies fetched successfully",
-            data : await this.movieRepo.find({ where: { status: MovieStatus.UPCOMING }, relations: ['casts', 'crews'] })
+            data : await queryBuilder.getMany()
         }
     }
 
-    async findRunningMovies(){
+    async findRunningMovies(filters?: MovieFilterDto){
+        const queryBuilder = this.movieRepo
+            .createQueryBuilder('movie')
+            .leftJoinAndSelect('movie.casts', 'casts')
+            .leftJoinAndSelect('movie.crews', 'crews')
+            .where('movie.status = :status', { status: MovieStatus.RUNNING });
+
+        // Apply search filter
+        if (filters?.search) {
+            queryBuilder.andWhere(
+                '(LOWER(movie.name) LIKE LOWER(:search) OR LOWER(movie.description) LIKE LOWER(:search))',
+                { search: `%${filters.search}%` }
+            );
+        }
+
+        // Apply genre filter
+        if (filters?.genre) {
+            queryBuilder.andWhere('movie.genre = :genre', { genre: filters.genre });
+        }
+
+        // Apply language filter
+        if (filters?.language) {
+            queryBuilder.andWhere('movie.language = :language', { language: filters.language });
+        }
+
+        // Apply rating filters
+        if (filters?.minRating) {
+            queryBuilder.andWhere('movie.rating >= :minRating', { minRating: filters.minRating });
+        }
+
+        if (filters?.maxRating) {
+            queryBuilder.andWhere('movie.rating <= :maxRating', { maxRating: filters.maxRating });
+        }
+
+        // Apply date range filter
+        if (filters?.startDate) {
+            queryBuilder.andWhere('movie.releaseDate >= :startDate', { startDate: new Date(filters.startDate) });
+        }
+
+        if (filters?.endDate) {
+            queryBuilder.andWhere('movie.releaseDate <= :endDate', { endDate: new Date(filters.endDate) });
+        }
+
+        // Apply active status filter
+        if (filters?.isActive !== undefined) {
+            queryBuilder.andWhere('movie.isActive = :isActive', { isActive: filters.isActive });
+        }
+
+        // Apply cast names filter
+        if (filters?.castNames && filters.castNames.length > 0) {
+            queryBuilder.andWhere(
+                'EXISTS (SELECT 1 FROM casts WHERE casts.movieId = movie.id AND casts.name IN (:...castNames))',
+                { castNames: filters.castNames }
+            );
+        }
+
+        // Apply crew names filter
+        if (filters?.crewNames && filters.crewNames.length > 0) {
+            queryBuilder.andWhere(
+                'EXISTS (SELECT 1 FROM crews WHERE crews.movieId = movie.id AND crews.name IN (:...crewNames))',
+                { crewNames: filters.crewNames }
+            );
+        }
+
         return {
             message : "running movies fetched successfully",
-            data : await this.movieRepo.find({ where: { status: MovieStatus.RUNNING }, relations: ['casts', 'crews'] })
+            data : await queryBuilder.getMany()
         }
     }
 

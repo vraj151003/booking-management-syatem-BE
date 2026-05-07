@@ -6,6 +6,7 @@ import { User } from '../users/entity/user.entity';
 import { CreateScreenDTO } from './dto/create-screen-dto';
 import { Seat } from '../seat/entity/seat.entity';
 import { UpdateScreenDTO } from './dto/update-screen.dto';
+import { ScreenFilterDto } from './dto/screen-filter.dto';
 import { SeatType } from '../../common/constant';
 import messages from '../../common/config/message.json';
 
@@ -62,10 +63,44 @@ export class ScreenService {
     };
   }
 
-  async findAllScreen(){
-    const screen = await this.screenRepo.find({
-        relations : ['theaterOwner']
-    })
+  async findAllScreen(filters?: ScreenFilterDto){
+    const queryBuilder = this.screenRepo
+      .createQueryBuilder('screen')
+      .leftJoinAndSelect('screen.theaterOwner', 'theaterOwner');
+
+    // Apply search filter
+    if (filters?.search) {
+      queryBuilder.andWhere(
+        '(LOWER(screen.name) LIKE LOWER(:search) OR LOWER(theaterOwner.name) LIKE LOWER(:search) OR LOWER(theaterOwner.email) LIKE LOWER(:search))',
+        { search: `%${filters.search}%` }
+      );
+    }
+
+    // Apply owner filter
+    if (filters?.ownerId) {
+      queryBuilder.andWhere('screen.ownerId = :ownerId', { ownerId: filters.ownerId });
+    }
+
+    // Apply theater filter
+    if (filters?.theaterId) {
+      queryBuilder.andWhere('screen.theaterId = :theaterId', { theaterId: filters.theaterId });
+    }
+
+    // Apply active status filter
+    if (filters?.isActive !== undefined) {
+      queryBuilder.andWhere('screen.isActive = :isActive', { isActive: filters.isActive });
+    }
+
+    // Apply total seats filters
+    if (filters?.minTotalSeats) {
+      queryBuilder.andWhere('screen.totalSeats >= :minTotalSeats', { minTotalSeats: filters.minTotalSeats });
+    }
+
+    if (filters?.maxTotalSeats) {
+      queryBuilder.andWhere('screen.totalSeats <= :maxTotalSeats', { maxTotalSeats: filters.maxTotalSeats });
+    }
+
+    const screen = await queryBuilder.getMany();
 
     return {
         message : messages.messages.SCREEN.GET_ALL,

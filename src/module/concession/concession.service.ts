@@ -8,6 +8,7 @@ import { ConcessionOrderItem } from './entity/concession-order-item.entity';
 import { CreateConcessionDto } from './dto/create-concession.dto';
 import { CreateConcessionOrderDto } from './dto/create-concession-order.dto';
 import {  UpdateConcessionDto } from './dto/update-concession.dto';
+import { ConcessionFilterDto, ConcessionOrderFilterDto, ConcessionCategoryFilterDto } from './dto/concession-filter.dto';
 
 @Injectable()
 export class ConcessionService {
@@ -28,18 +29,90 @@ export class ConcessionService {
     return this.concessionRepo.save(concession);
   }
 
-  async getConcessionsByTheater(theaterOwnerId: string): Promise<Concession[]> {
-    return this.concessionRepo.find({
-      where: { theaterOwner: { id: theaterOwnerId } },
-      relations: ['category'],
-    });
+  async getConcessionsByTheater(theaterOwnerId: string, filters?: ConcessionFilterDto): Promise<Concession[]> {
+    const queryBuilder = this.concessionRepo
+      .createQueryBuilder('concession')
+      .leftJoinAndSelect('concession.category', 'category')
+      .where('concession.theaterOwner.id = :theaterOwnerId', { theaterOwnerId });
+
+    // Apply search filter
+    if (filters?.search) {
+      queryBuilder.andWhere(
+        '(LOWER(concession.name) LIKE LOWER(:search) OR LOWER(concession.description) LIKE LOWER(:search))',
+        { search: `%${filters.search}%` }
+      );
+    }
+
+    // Apply status filter
+    if (filters?.status) {
+      queryBuilder.andWhere('concession.status = :status', { status: filters.status });
+    }
+
+    // Apply category filter
+    if (filters?.categoryId) {
+      queryBuilder.andWhere('concession.categoryId = :categoryId', { categoryId: filters.categoryId });
+    }
+
+    // Apply low stock filter
+    if (filters?.lowStock) {
+      queryBuilder.andWhere('concession.stockQuantity <= concession.minStockThreshold');
+    }
+
+    // Apply date range filter
+    if (filters?.startDate) {
+      queryBuilder.andWhere('concession.createdAt >= :startDate', { startDate: new Date(filters.startDate) });
+    }
+
+    if (filters?.endDate) {
+      const endDate = new Date(filters.endDate);
+      endDate.setHours(23, 59, 59);
+      queryBuilder.andWhere('concession.createdAt <= :endDate', { endDate });
+    }
+
+    return await queryBuilder.getMany();
   }
 
-  async getConcessionsByCategory(categoryId: number): Promise<Concession[]> {
-    return this.concessionRepo.find({
-      where: { status: ConcessionStatus.ACTIVE },
-      relations: ['category'],
-    });
+  async getConcessionsByCategory(categoryId: number, filters?: ConcessionFilterDto): Promise<Concession[]> {
+    const queryBuilder = this.concessionRepo
+      .createQueryBuilder('concession')
+      .leftJoinAndSelect('concession.category', 'category')
+      .where('concession.categoryId = :categoryId', { categoryId });
+
+    // Apply search filter
+    if (filters?.search) {
+      queryBuilder.andWhere(
+        '(LOWER(concession.name) LIKE LOWER(:search) OR LOWER(concession.description) LIKE LOWER(:search))',
+        { search: `%${filters.search}%` }
+      );
+    }
+
+    // Apply status filter
+    if (filters?.status) {
+      queryBuilder.andWhere('concession.status = :status', { status: filters.status });
+    }
+
+    // Apply theater owner filter
+    if (filters?.theaterOwnerId) {
+      queryBuilder.andWhere('concession.theaterOwnerId = :theaterOwnerId', { theaterOwnerId: filters.theaterOwnerId });
+    }
+
+    // Apply low stock filter
+    if (filters?.lowStock) {
+      queryBuilder.andWhere('concession.stockQuantity <= concession.minStockThreshold');
+    }
+
+    // Apply date range filter
+    if (filters?.startDate) {
+      queryBuilder.andWhere('concession.createdAt >= :startDate', { startDate: new Date(filters.startDate) });
+    }
+
+    if (filters?.endDate) {
+      const endDate = new Date(filters.endDate);
+      endDate.setHours(23, 59, 59);
+      queryBuilder.andWhere('concession.createdAt <= :endDate', { endDate });
+    }
+
+    return await queryBuilder.getMany();
   }
 
   async updateConcession(id: number, updateConcessionDto: UpdateConcessionDto): Promise<Concession | null> {
@@ -61,11 +134,26 @@ export class ConcessionService {
     return this.categoryRepo.save(category);
   }
 
-  async getCategories(): Promise<ConcessionCategory[]> {
-    return this.categoryRepo.find({ 
-      where: { isActive: true },
-      order: { displayOrder: 'ASC' }
-    });
+  async getCategories(filters?: ConcessionCategoryFilterDto): Promise<ConcessionCategory[]> {
+    const queryBuilder = this.categoryRepo.createQueryBuilder('category');
+
+    // Apply search filter
+    if (filters?.search) {
+      queryBuilder.andWhere(
+        '(LOWER(category.name) LIKE LOWER(:search) OR LOWER(category.description) LIKE LOWER(:search))',
+        { search: `%${filters.search}%` }
+      );
+    }
+
+    // Apply active status filter
+    if (filters?.isActive !== undefined) {
+      queryBuilder.andWhere('category.isActive = :isActive', { isActive: filters.isActive });
+    } else {
+      // Default to active categories if not specified
+      queryBuilder.andWhere('category.isActive = :isActive', { isActive: true });
+    }
+
+    return await queryBuilder.orderBy('category.displayOrder', 'ASC').getMany();
   }
 
   async getCategoryById(id: number): Promise<ConcessionCategory | null> {
@@ -135,18 +223,92 @@ export class ConcessionService {
     return savedOrder;
   }
 
-  async getConcessionOrdersByUser(userId: string): Promise<ConcessionOrder[]> {
-    return this.orderRepo.find({
-      where: { user: { id: userId } },
-      relations: ['orderItems', 'orderItems.concession'],
-    });
+  async getConcessionOrdersByUser(userId: string, filters?: ConcessionOrderFilterDto): Promise<ConcessionOrder[]> {
+    const queryBuilder = this.orderRepo
+      .createQueryBuilder('order')
+      .leftJoinAndSelect('order.orderItems', 'orderItems')
+      .leftJoinAndSelect('orderItems.concession', 'concession')
+      .where('order.user.id = :userId', { userId });
+
+    // Apply search filter
+    if (filters?.search) {
+      queryBuilder.andWhere(
+        '(LOWER(concession.name) LIKE LOWER(:search) OR LOWER(order.specialInstructions) LIKE LOWER(:search))',
+        { search: `%${filters.search}%` }
+      );
+    }
+
+    // Apply status filter
+    if (filters?.status) {
+      queryBuilder.andWhere('order.status = :status', { status: filters.status });
+    }
+
+    // Apply booking filter
+    if (filters?.bookingId) {
+      queryBuilder.andWhere('order.bookingId = :bookingId', { bookingId: filters.bookingId });
+    }
+
+    // Apply paid status filter
+    if (filters?.isPaid !== undefined) {
+      queryBuilder.andWhere('order.isPaid = :isPaid', { isPaid: filters.isPaid });
+    }
+
+    // Apply date range filter
+    if (filters?.startDate) {
+      queryBuilder.andWhere('order.createdAt >= :startDate', { startDate: new Date(filters.startDate) });
+    }
+
+    if (filters?.endDate) {
+      const endDate = new Date(filters.endDate);
+      endDate.setHours(23, 59, 59);
+      queryBuilder.andWhere('order.createdAt <= :endDate', { endDate });
+    }
+
+    return await queryBuilder.getMany();
   }
 
-  async getConcessionOrdersByBooking(bookingId: string): Promise<ConcessionOrder[]> {
-    return this.orderRepo.find({
-      where: { booking: { id: bookingId } },
-      relations: ['orderItems', 'orderItems.concession'],
-    });
+  async getConcessionOrdersByBooking(bookingId: string, filters?: ConcessionOrderFilterDto): Promise<ConcessionOrder[]> {
+    const queryBuilder = this.orderRepo
+      .createQueryBuilder('order')
+      .leftJoinAndSelect('order.orderItems', 'orderItems')
+      .leftJoinAndSelect('orderItems.concession', 'concession')
+      .where('order.booking.id = :bookingId', { bookingId });
+
+    // Apply search filter
+    if (filters?.search) {
+      queryBuilder.andWhere(
+        '(LOWER(concession.name) LIKE LOWER(:search) OR LOWER(order.specialInstructions) LIKE LOWER(:search))',
+        { search: `%${filters.search}%` }
+      );
+    }
+
+    // Apply status filter
+    if (filters?.status) {
+      queryBuilder.andWhere('order.status = :status', { status: filters.status });
+    }
+
+    // Apply user filter
+    if (filters?.userId) {
+      queryBuilder.andWhere('order.userId = :userId', { userId: filters.userId });
+    }
+
+    // Apply paid status filter
+    if (filters?.isPaid !== undefined) {
+      queryBuilder.andWhere('order.isPaid = :isPaid', { isPaid: filters.isPaid });
+    }
+
+    // Apply date range filter
+    if (filters?.startDate) {
+      queryBuilder.andWhere('order.createdAt >= :startDate', { startDate: new Date(filters.startDate) });
+    }
+
+    if (filters?.endDate) {
+      const endDate = new Date(filters.endDate);
+      endDate.setHours(23, 59, 59);
+      queryBuilder.andWhere('order.createdAt <= :endDate', { endDate });
+    }
+
+    return await queryBuilder.getMany();
   }
 
   async updateOrderStatus(orderId: number, status: ConcessionOrderStatus): Promise<void> {

@@ -1,8 +1,9 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, Request } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, Request, Query } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { ReviewService } from './review.service';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { UpdateReviewDto } from './dto/update-review.dto';
+import { ReviewFilterDto } from './dto/review-filter.dto';
 import { ReviewableType } from './entity/review.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../permission/guards/permission.guard';
@@ -25,37 +26,70 @@ export class ReviewController {
 
   @Get()
   @RequirePermissions('READ_REVIEW')
-  @ApiOperation({ summary: 'Get all reviews' })
+  @ApiOperation({ summary: 'Get all reviews with filters' })
   @ApiResponse({ status: 200, description: 'Reviews retrieved successfully' })
-  async findAllReviews() {
-    return await this.reviewService.findAllReviews();
+  @ApiQuery({ name: 'search', required: false })
+  @ApiQuery({ name: 'reviewableType', required: false })
+  @ApiQuery({ name: 'reviewableId', required: false })
+  @ApiQuery({ name: 'userId', required: false })
+  @ApiQuery({ name: 'minRating', required: false })
+  @ApiQuery({ name: 'maxRating', required: false })
+  @ApiQuery({ name: 'startDate', required: false })
+  @ApiQuery({ name: 'endDate', required: false })
+  @ApiQuery({ name: 'userIds', required: false })
+  async findAllReviews(@Query() filters: ReviewFilterDto) {
+    return await this.reviewService.findAllReviews(filters);
   }
 
   @Get('movies')
   @RequirePermissions('READ_REVIEW')
-  @ApiOperation({ summary: 'Get all movie reviews' })
+  @ApiOperation({ summary: 'Get all movie reviews with filters' })
   @ApiResponse({ status: 200, description: 'Movie reviews retrieved successfully' })
-  async findMovieReviews() {
-    return await this.reviewService.findReviewsByType(ReviewableType.MOVIE);
+  @ApiQuery({ name: 'search', required: false })
+  @ApiQuery({ name: 'reviewableId', required: false })
+  @ApiQuery({ name: 'userId', required: false })
+  @ApiQuery({ name: 'minRating', required: false })
+  @ApiQuery({ name: 'maxRating', required: false })
+  @ApiQuery({ name: 'startDate', required: false })
+  @ApiQuery({ name: 'endDate', required: false })
+  @ApiQuery({ name: 'userIds', required: false })
+  async findMovieReviews(@Query() filters: ReviewFilterDto) {
+    return await this.reviewService.findReviewsByType(ReviewableType.MOVIE, filters);
   }
 
   @Get('theaters')
   @RequirePermissions('READ_REVIEW')
-  @ApiOperation({ summary: 'Get all theater reviews' })
+  @ApiOperation({ summary: 'Get all theater reviews with filters' })
   @ApiResponse({ status: 200, description: 'Theater reviews retrieved successfully' })
-  async findTheaterReviews() {
-    return await this.reviewService.findReviewsByType(ReviewableType.THEATER);
+  @ApiQuery({ name: 'search', required: false })
+  @ApiQuery({ name: 'reviewableId', required: false })
+  @ApiQuery({ name: 'userId', required: false })
+  @ApiQuery({ name: 'minRating', required: false })
+  @ApiQuery({ name: 'maxRating', required: false })
+  @ApiQuery({ name: 'startDate', required: false })
+  @ApiQuery({ name: 'endDate', required: false })
+  @ApiQuery({ name: 'userIds', required: false })
+  async findTheaterReviews(@Query() filters: ReviewFilterDto) {
+    return await this.reviewService.findReviewsByType(ReviewableType.THEATER, filters);
   }
 
   @Get('item/:type/:itemId')
   @RequirePermissions('READ_REVIEW')
-  @ApiOperation({ summary: 'Get reviews for specific movie or theater' })
+  @ApiOperation({ summary: 'Get reviews for specific movie or theater with filters' })
   @ApiResponse({ status: 200, description: 'Reviews retrieved successfully' })
+  @ApiQuery({ name: 'search', required: false })
+  @ApiQuery({ name: 'userId', required: false })
+  @ApiQuery({ name: 'minRating', required: false })
+  @ApiQuery({ name: 'maxRating', required: false })
+  @ApiQuery({ name: 'startDate', required: false })
+  @ApiQuery({ name: 'endDate', required: false })
+  @ApiQuery({ name: 'userIds', required: false })
   async findReviewsByItem(
     @Param('type') type: ReviewableType,
     @Param('itemId') itemId: string,
+    @Query() filters: ReviewFilterDto
   ) {
-    return await this.reviewService.findReviewsByItem(type, itemId);
+    return await this.reviewService.findReviewsByItem(type, itemId, filters);
   }
 
   @Get('item/:type/:itemId/average')
@@ -71,10 +105,17 @@ export class ReviewController {
 
   @Get('my-reviews')
   @RequirePermissions('READ_REVIEW')
-  @ApiOperation({ summary: 'Get current user reviews' })
+  @ApiOperation({ summary: 'Get current user reviews with filters' })
   @ApiResponse({ status: 200, description: 'User reviews retrieved successfully' })
-  async findUserReviews(@Request() req) {
-    return await this.reviewService.findUserReviews(req.user.id);
+  @ApiQuery({ name: 'search', required: false })
+  @ApiQuery({ name: 'reviewableType', required: false })
+  @ApiQuery({ name: 'reviewableId', required: false })
+  @ApiQuery({ name: 'minRating', required: false })
+  @ApiQuery({ name: 'maxRating', required: false })
+  @ApiQuery({ name: 'startDate', required: false })
+  @ApiQuery({ name: 'endDate', required: false })
+  async findUserReviews(@Request() req, @Query() filters: ReviewFilterDto) {
+    return await this.reviewService.findUserReviews(req.user.id, filters);
   }
 
   @Get(':id')

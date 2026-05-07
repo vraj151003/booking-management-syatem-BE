@@ -7,6 +7,7 @@ import { UpdateConcessionDto } from './dto/update-concession.dto';
 import { CreateConcessionOrderDto } from './dto/create-concession-order.dto';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
+import { ConcessionFilterDto, ConcessionOrderFilterDto, ConcessionCategoryFilterDto } from './dto/concession-filter.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ConcessionOrderStatus } from './entity/concession-order.entity';
 
@@ -33,23 +34,41 @@ export class ConcessionController {
 
   @Get('theater/:theaterId')
   @RequirePermissions('READ_CONCESSION')
-  @ApiOperation({ summary: 'Get concessions by theater' })
+  @ApiOperation({ summary: 'Get concessions by theater with filters' })
   @ApiResponse({ status: 200, description: 'Concessions retrieved successfully' })
-  async getConcessionsByTheater(@Param('theaterId') theaterId: string) {
+  @ApiQuery({ name: 'search', required: false })
+  @ApiQuery({ name: 'status', required: false })
+  @ApiQuery({ name: 'categoryId', required: false })
+  @ApiQuery({ name: 'lowStock', required: false })
+  @ApiQuery({ name: 'startDate', required: false })
+  @ApiQuery({ name: 'endDate', required: false })
+  async getConcessionsByTheater(
+    @Param('theaterId') theaterId: string,
+    @Query() filters: ConcessionFilterDto
+  ) {
     return {
       message: 'Concessions retrieved successfully',
-      data: await this.concessionService.getConcessionsByTheater(theaterId),
+      data: await this.concessionService.getConcessionsByTheater(theaterId, filters),
     };
   }
 
   @Get('category/:categoryId')
   @RequirePermissions('READ_CONCESSION')
-  @ApiOperation({ summary: 'Get concessions by category' })
+  @ApiOperation({ summary: 'Get concessions by category with filters' })
   @ApiResponse({ status: 200, description: 'Concessions retrieved successfully' })
-  async getConcessionsByCategory(@Param('categoryId') categoryId: number) {
+  @ApiQuery({ name: 'search', required: false })
+  @ApiQuery({ name: 'status', required: false })
+  @ApiQuery({ name: 'theaterOwnerId', required: false })
+  @ApiQuery({ name: 'lowStock', required: false })
+  @ApiQuery({ name: 'startDate', required: false })
+  @ApiQuery({ name: 'endDate', required: false })
+  async getConcessionsByCategory(
+    @Param('categoryId') categoryId: number,
+    @Query() filters: ConcessionFilterDto
+  ) {
     return {
       message: 'Concessions retrieved successfully',
-      data: await this.concessionService.getConcessionsByCategory(categoryId),
+      data: await this.concessionService.getConcessionsByCategory(categoryId, filters),
     };
   }
 
@@ -106,12 +125,14 @@ export class ConcessionController {
 
   @Get('categories')
   @RequirePermissions('READ_CONCESSION_CATEGORY')
-  @ApiOperation({ summary: 'Get all concession categories' })
+  @ApiOperation({ summary: 'Get all concession categories with filters' })
   @ApiResponse({ status: 200, description: 'Categories retrieved successfully' })
-  async getCategories() {
+  @ApiQuery({ name: 'search', required: false })
+  @ApiQuery({ name: 'isActive', required: false })
+  async getCategories(@Query() filters: ConcessionCategoryFilterDto) {
     return {
       message: 'Categories retrieved successfully',
-      data: await this.concessionService.getCategories(),
+      data: await this.concessionService.getCategories(filters),
     };
   }
 
@@ -180,13 +201,22 @@ export class ConcessionController {
   @UseGuards(JwtAuthGuard)
   @RequirePermissions('READ_CONCESSION_ORDERS_BY_USER')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get concession orders by user' })
+  @ApiOperation({ summary: 'Get concession orders by user with filters' })
   @ApiResponse({ status: 200, description: 'Orders retrieved successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async getOrdersByUser(@Param('userId') userId: string) {
+  @ApiQuery({ name: 'search', required: false })
+  @ApiQuery({ name: 'status', required: false })
+  @ApiQuery({ name: 'bookingId', required: false })
+  @ApiQuery({ name: 'isPaid', required: false })
+  @ApiQuery({ name: 'startDate', required: false })
+  @ApiQuery({ name: 'endDate', required: false })
+  async getOrdersByUser(
+    @Param('userId') userId: string,
+    @Query() filters: ConcessionOrderFilterDto
+  ) {
     return {
       message: 'Orders retrieved successfully',
-      data: await this.concessionService.getConcessionOrdersByUser(userId),
+      data: await this.concessionService.getConcessionOrdersByUser(userId, filters),
     };
   }
 
@@ -194,13 +224,22 @@ export class ConcessionController {
   @UseGuards(JwtAuthGuard)
   @RequirePermissions('READ_CONCESSION_ORDERS_BY_BOOKING')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get concession orders by booking' })
+  @ApiOperation({ summary: 'Get concession orders by booking with filters' })
   @ApiResponse({ status: 200, description: 'Orders retrieved successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async getOrdersByBooking(@Param('bookingId') bookingId: string) {
+  @ApiQuery({ name: 'search', required: false })
+  @ApiQuery({ name: 'status', required: false })
+  @ApiQuery({ name: 'userId', required: false })
+  @ApiQuery({ name: 'isPaid', required: false })
+  @ApiQuery({ name: 'startDate', required: false })
+  @ApiQuery({ name: 'endDate', required: false })
+  async getOrdersByBooking(
+    @Param('bookingId') bookingId: string,
+    @Query() filters: ConcessionOrderFilterDto
+  ) {
     return {
       message: 'Orders retrieved successfully',
-      data: await this.concessionService.getConcessionOrdersByBooking(bookingId),
+      data: await this.concessionService.getConcessionOrdersByBooking(bookingId, filters),
     };
   }
 

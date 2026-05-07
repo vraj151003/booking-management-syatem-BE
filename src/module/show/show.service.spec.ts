@@ -4,7 +4,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ShowService } from './show.service';
 import { Show } from './entity/show.entity';
-import { Movie } from '../movie/entity/movie.entity';
+import { Movie, MovieStatus } from '../movie/entity/movie.entity';
 import { Screen } from '../screen/entity/screen.entity';
 import { Seat } from '../seat/entity/seat.entity';
 import { Booking } from '../booking/entity/booking.entity';
@@ -53,6 +53,8 @@ describe('ShowService', () => {
     idProof: null as any,
     agreementDoc: null as any,
     adminVerified: false,
+    failedLoginAttempts: 0,
+    lockedUntil: null,
   };
 
   const mockMovie: Movie = {
@@ -67,8 +69,12 @@ describe('ShowService', () => {
     poster: [],
     trailer: [],
     isActive: true,
+    status: MovieStatus.UPCOMING,
     createdAt: new Date(),
     updatedAt: new Date(),
+    shows: [],
+    casts: [],
+    crews: [],
   };
 
   const mockScreen: Screen = {
@@ -88,6 +94,7 @@ describe('ShowService', () => {
     endTime: '12:00',
     pricing: { GOLD: 300, SILVER: 200, STANDARD: 150 },
     isActive: true,
+    bookings: [],
   };
 
   const mockSeat: Seat = {
@@ -99,13 +106,13 @@ describe('ShowService', () => {
     screen: mockScreen,
   };
 
-  const mockBooking: Booking = {
-    id: 'booking-1',
-    user: mockUser,
-    show: mockShow,
-    seats: [mockSeat],
-    totalAmount: 300,
-    status: 'CONFIRMED',
+
+
+  const mockQueryBuilder = {
+    leftJoinAndSelect: jest.fn().mockReturnThis(),
+    where: jest.fn().mockReturnThis(),
+    andWhere: jest.fn().mockReturnThis(),
+    getMany: jest.fn().mockResolvedValue([]),
   };
 
   const mockShowRepo = {
@@ -114,6 +121,7 @@ describe('ShowService', () => {
     create: jest.fn(),
     save: jest.fn(),
     remove: jest.fn(),
+    createQueryBuilder: jest.fn().mockReturnValue(mockQueryBuilder),
   };
 
   const mockMovieRepo = {
@@ -443,7 +451,7 @@ describe('ShowService', () => {
     describe('Success cases', () => {
       it('should return all shows with relations', async () => {
         // Arrange
-        mockShowRepo.find.mockResolvedValue([mockShow]);
+        mockQueryBuilder.getMany.mockResolvedValue([mockShow]);
 
         // Act
         const result = await service.findAll();
@@ -452,27 +460,32 @@ describe('ShowService', () => {
         expect(result).toHaveProperty('message');
         expect(result).toHaveProperty('data');
         expect(result.data).toEqual([mockShow]);
-        expect(showRepo.find).toHaveBeenCalledWith({
-          relations: ['movie', 'screen'],
-        });
+        expect(showRepo.createQueryBuilder).toHaveBeenCalledWith('show');
+        expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith('show.movie', 'movie');
+        expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith('show.screen', 'screen');
+        expect(mockQueryBuilder.getMany).toHaveBeenCalled();
       });
 
       it('should return empty array when no shows exist', async () => {
         // Arrange
-        mockShowRepo.find.mockResolvedValue([]);
+        mockQueryBuilder.getMany.mockResolvedValue([]);
 
         // Act
         const result = await service.findAll();
 
         // Assert
         expect(result.data).toEqual([]);
+        expect(showRepo.createQueryBuilder).toHaveBeenCalledWith('show');
+        expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith('show.movie', 'movie');
+        expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith('show.screen', 'screen');
+        expect(mockQueryBuilder.getMany).toHaveBeenCalled();
       });
     });
 
     describe('Edge cases', () => {
       it('should handle repository errors gracefully', async () => {
         // Arrange
-        mockShowRepo.find.mockRejectedValue(new Error('Database error'));
+        mockQueryBuilder.getMany.mockRejectedValue(new Error('Database error'));
 
         // Act & Assert
         await expect(service.findAll()).rejects.toThrow('Database error');

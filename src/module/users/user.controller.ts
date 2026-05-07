@@ -1,5 +1,5 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from "@nestjs/common";
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from "@nestjs/swagger";
+import { Body, Controller, Get, Param, Post, UseGuards, Query } from "@nestjs/common";
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from "@nestjs/swagger";
 import { UserService } from "./users.service";
 import { AuthService } from "../auth/auth.service";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
@@ -9,11 +9,15 @@ import { VerifyOtpDto } from "./dto/verify-otp.dto";
 import { LoginDto } from "./dto/login.dto";
 import { ForgotPasswordDto } from "./dto/forgot-password.dto";
 import { ResetPasswordDto } from "./dto/reset-password.dto";
+import { UserFilterDto } from "./dto/user-filter.dto";
 import { BypassThrottle } from "../../common/throttler/throttler.decorator";
+import { RequirePermissions } from "../permission/decorators/permissions.decorator";
+import { PermissionsGuard } from "../permission/guards/permission.guard";
 import * as messageConfig from "../../common/config/message.json";
 
 @ApiTags('auth')
 @Controller("auth")
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 export class UserController {
     constructor(
         private readonly userService : UserService,
@@ -73,8 +77,28 @@ export class UserController {
         };
     }
 
+    @Get('users')
+    @RequirePermissions('MANAGE_USERS')
+    @ApiOperation({ summary: 'Get all users with filters' })
+    @ApiResponse({ status: 200, description: 'Users retrieved successfully' })
+    @ApiQuery({ name: 'search', required: false })
+    @ApiQuery({ name: 'roleId', required: false })
+    @ApiQuery({ name: 'roleName', required: false })
+    @ApiQuery({ name: 'isVerified', required: false })
+    @ApiQuery({ name: 'isActive', required: false })
+    @ApiQuery({ name: 'startDate', required: false })
+    @ApiQuery({ name: 'endDate', required: false })
+    @ApiQuery({ name: 'roleNames', required: false })
+    async findAllUsers(@Query() filters: UserFilterDto)
+    {
+        return {
+            message: 'Users retrieved successfully',
+            data: await this.userService.findAllUsers(filters)
+        };
+    }
+
     @Get('user/:id')
-    @UseGuards(JwtAuthGuard)
+    @RequirePermissions('READ_USER')
     @ApiBearerAuth()
     @ApiOperation({ summary: 'Get user by ID' })
     @ApiResponse({ status: 200, description: 'User retrieved successfully' })

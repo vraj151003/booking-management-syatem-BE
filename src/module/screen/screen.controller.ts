@@ -7,11 +7,13 @@ import {
   Param,
   Body,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { ScreenService } from './screen.service';
-import { ApiTags, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { CreateScreenDTO } from './dto/create-screen-dto';
 import { UpdateScreenDTO } from './dto/update-screen.dto';
+import { ScreenFilterDto } from './dto/screen-filter.dto';
 import { RequirePermissions } from '../permission/decorators/permissions.decorator';
 import { PermissionsGuard } from '../permission/guards/permission.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -33,8 +35,14 @@ export class ScreenController {
   @Get()
   @RequirePermissions('READ_SCREEN')
   @ApiResponse({ status: 200, description: 'All screens fetched' })
-  findAll() {
-    return this.screenService.findAllScreen();
+  @ApiQuery({ name: 'search', required: false })
+  @ApiQuery({ name: 'ownerId', required: false })
+  @ApiQuery({ name: 'theaterId', required: false })
+  @ApiQuery({ name: 'isActive', required: false })
+  @ApiQuery({ name: 'minTotalSeats', required: false })
+  @ApiQuery({ name: 'maxTotalSeats', required: false })
+  findAll(@Query() filters: ScreenFilterDto) {
+    return this.screenService.findAllScreen(filters);
   }
 
   @Get(':id')
