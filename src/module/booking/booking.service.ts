@@ -25,6 +25,7 @@ import * as csvWriter from 'csv-writer';
 import { AuditAction } from '../../common/constant';
 
 @Injectable()
+
 export class BookingService {
   constructor(
     private dataSource: DataSource,
@@ -139,7 +140,7 @@ export class BookingService {
       const finalAmountWithGST = gstCalculation.totalAmount;
 
       const paymentIntent =
-        await this.stripeService.createPaymentIntent(finalAmountWithGST);
+        await this.stripeService.createPaymentIntent(finalAmountWithGST, { type: 'booking' });
 
       const booking = queryRunner.manager.create(Booking, {
         show,
@@ -266,7 +267,7 @@ export class BookingService {
         seats: booking.seats.map(seat => `${seat.row}${seat.seatNumber}`),
         totalAmount: booking.totalAmount,
         bookingId: booking.id,
-      });
+      }, booking.user.id, booking.show.screen.theaterOwner.id);
     } catch (error) {
     }
 

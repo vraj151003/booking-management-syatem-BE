@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, UseGuards, Query } from "@nestjs/common";
+import { Body, Controller, Get, Param, Post, UseGuards, Query, BadRequestException } from "@nestjs/common";
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from "@nestjs/swagger";
 import { UserService } from "./users.service";
 import { AuthService } from "../auth/auth.service";
@@ -17,7 +17,6 @@ import * as messageConfig from "../../common/config/message.json";
 
 @ApiTags('auth')
 @Controller("auth")
-@UseGuards(JwtAuthGuard, PermissionsGuard)
 export class UserController {
     constructor(
         private readonly userService : UserService,
@@ -78,7 +77,9 @@ export class UserController {
     }
 
     @Get('users')
+    @UseGuards(JwtAuthGuard, PermissionsGuard)
     @RequirePermissions('MANAGE_USERS')
+    @ApiBearerAuth()
     @ApiOperation({ summary: 'Get all users with filters' })
     @ApiResponse({ status: 200, description: 'Users retrieved successfully' })
     @ApiQuery({ name: 'search', required: false })
@@ -98,6 +99,7 @@ export class UserController {
     }
 
     @Get('user/:id')
+    @UseGuards(JwtAuthGuard, PermissionsGuard)
     @RequirePermissions('READ_USER')
     @ApiBearerAuth()
     @ApiOperation({ summary: 'Get user by ID' })
@@ -117,11 +119,20 @@ export class UserController {
     @ApiOperation({ summary: 'Request password reset OTP' })
     @ApiResponse({ status: 200, description: 'OTP sent successfully' })
     @ApiResponse({ status: 404, description: 'User not found' })
+    @ApiResponse({ status: 400, description: 'Either email or mobile number is required' })
     async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto)
     {
+        const emailOrMobile = forgotPasswordDto.email || forgotPasswordDto.mobileNumber;
+        
+        if (!emailOrMobile) {
+            throw new BadRequestException('Either email or mobile number is required');
+        }
+
+        const result = await this.userService.forgotPassword(emailOrMobile);
+        
         return {
             message: messageConfig.messages.AUTH.FORGOT_PASSWORD,
-            data: await this.userService.forgotPassword(forgotPasswordDto.email)
+            data: result
         };
     }
 

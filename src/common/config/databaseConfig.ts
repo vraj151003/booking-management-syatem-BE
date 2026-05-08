@@ -26,5 +26,13 @@ export default registerAs('database', () => ({
   stripeSecretKey: process.env.STRIPE_SECRET_KEY || '',
   stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
   stripePublishableKey: process.env.STRIPE_PUBLISHABLE_KEY || '',
+
+  TWILIO_ACCOUNT_SID: process.env.TWILIO_ACCOUNT_SID,
+  TWILIO_AUTH_TOKEN : process.env.TWILIO_AUTH_TOKEN,
+  TWILIO_FROM_NUMBER: process.env.TWILIO_FROM_NUMBER,
+
+  FIREBASE_PROJECT_ID:process.env.FIREBASE_PROJECT_ID,
+  FIREBASE_CLIENT_EMAIL:process.env.FIREBASE_CLIENT_EMAIL,
+  FIREBASE_PRIVATE_KEY:process.env.FIREBASE_PRIVATE_KEY,
   
 }));

@@ -7,11 +7,15 @@ import { Payment } from './entity/payment.entity';
 import { Booking } from '../booking/entity/booking.entity';
 import { User } from '../users/entity/user.entity';
 import { BookingModule } from '../booking/booking.module';
+import { ConcessionModule } from '../concession/concession.module';
+import { FirebaseModule } from '../firebase/firebase.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Payment, Booking, User]),
     forwardRef(() => BookingModule),
+    forwardRef(() => ConcessionModule),
+    FirebaseModule,
   ],
   controllers: [StripeController],
   providers: [PaymentService, StripeService],

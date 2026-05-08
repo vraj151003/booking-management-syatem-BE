@@ -9,6 +9,7 @@ import { ConcessionOrderItem } from './entity/concession-order-item.entity';
 import { CreateConcessionDto } from './dto/create-concession.dto';
 import { UpdateConcessionDto } from './dto/update-concession.dto';
 import { CreateConcessionOrderDto } from './dto/create-concession-order.dto';
+import { StripeService } from '../payment/stripe/stripe.service';
 
 describe('ConcessionService', () => {
   let service: ConcessionService;
@@ -16,6 +17,7 @@ describe('ConcessionService', () => {
   let categoryRepo: Repository<ConcessionCategory>;
   let orderRepo: Repository<ConcessionOrder>;
   let orderItemRepo: Repository<ConcessionOrderItem>;
+  let stripeService: StripeService;
 
   const mockConcessionRepo = {
     create: jest.fn(),
@@ -68,6 +70,10 @@ describe('ConcessionService', () => {
     save: jest.fn(),
   };
 
+  const mockStripeService = {
+    createPaymentIntent: jest.fn(),
+  };
+
   const mockQueryBuilder = {
     leftJoinAndSelect: jest.fn().mockReturnThis(),
     where: jest.fn().mockReturnThis(),
@@ -96,6 +102,10 @@ describe('ConcessionService', () => {
           provide: getRepositoryToken(ConcessionOrderItem),
           useValue: mockOrderItemRepo,
         },
+        {
+          provide: StripeService,
+          useValue: mockStripeService,
+        },
       ],
     }).compile();
 
@@ -112,6 +122,7 @@ describe('ConcessionService', () => {
     orderItemRepo = module.get<Repository<ConcessionOrderItem>>(
       getRepositoryToken(ConcessionOrderItem),
     );
+    stripeService = module.get<StripeService>(StripeService);
 
     jest.clearAllMocks();
   });
@@ -977,13 +988,23 @@ describe('ConcessionService', () => {
         mockOrderRepo.save.mockResolvedValue(savedOrder);
         mockOrderItemRepo.create.mockReturnValue({});
         mockOrderItemRepo.save.mockResolvedValue({});
+        mockStripeService.createPaymentIntent.mockResolvedValue({
+          id: 'pi_123',
+          client_secret: 'secret_123',
+        });
 
         // Act
         const result = await service.createConcessionOrder(createOrderDto);
 
         // Assert
         expect(result).toBeDefined();
-        expect(result.totalAmount).toBeGreaterThan(0);
+        expect(result.totalAmount).toBe(17.98); // 8.99 * 2
+        expect(result.clientSecret).toBe('secret_123');
+        expect(mockStripeService.createPaymentIntent).toHaveBeenCalledWith(17.98, {
+          type: 'concession',
+          orderId: '1',
+          userId: 'user-123',
+        });
       });
 
       it('should throw error when stock is insufficient', async () => {

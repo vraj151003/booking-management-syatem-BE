@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotificationService, BookingNotificationData } from './notification.service';
 import { MailService } from '../mail/mail.service';
+import { FirebaseService } from '../firebase/firebase.service';
 
 describe('NotificationService', () => {
   let service: NotificationService;
@@ -9,8 +10,18 @@ describe('NotificationService', () => {
   const mockMailService = { sendMail: jest.fn() };
 
   beforeEach(async () => {
+    const mockFirebaseService = {
+      sendBookingConfirmationToCustomer: jest.fn(),
+      sendBookingNotificationToTheaterOwner: jest.fn(),
+      sendPaymentNotification: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
-      providers: [NotificationService, { provide: MailService, useValue: mockMailService }],
+      providers: [
+        NotificationService, 
+        { provide: MailService, useValue: mockMailService },
+        { provide: FirebaseService, useValue: mockFirebaseService },
+      ],
     }).compile();
 
     service = module.get<NotificationService>(NotificationService);

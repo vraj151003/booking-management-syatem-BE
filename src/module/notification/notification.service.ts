@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { MailService } from '../mail/mail.service';
+import { FirebaseService } from '../firebase/firebase.service';
 
 export interface BookingNotificationData {
   customerName: string;
@@ -16,11 +17,15 @@ export interface BookingNotificationData {
 
 @Injectable()
 export class NotificationService {
-  constructor(private readonly mailService: MailService) {}
+  constructor(
+    private readonly mailService: MailService,
+    private readonly firebaseService: FirebaseService,
+  ) {}
 
-  async sendBookingConfirmationToCustomer(data: BookingNotificationData) {
+  async sendBookingConfirmationToCustomer(data: BookingNotificationData, userId?: string) {
     const seatsList = data.seats.join(', ');
     
+    // Send email notification
     await this.mailService.sendMail({
       to: data.customerEmail,
       subject: 'Booking Confirmed - Your Movie Ticket',
@@ -49,11 +54,25 @@ export class NotificationService {
         </div>
       `,
     });
+
+    // Send push notification if userId is provided
+    if (userId) {
+      await this.firebaseService.sendBookingConfirmationToCustomer(userId, {
+        bookingId: data.bookingId,
+        movieName: data.movieName,
+        showDate: data.showDate,
+        showTime: data.showTime,
+        screenName: data.screenName,
+        seats: data.seats,
+        totalAmount: data.totalAmount,
+      });
+    }
   }
 
-  async sendBookingNotificationToTheaterOwner(data: BookingNotificationData) {
+  async sendBookingNotificationToTheaterOwner(data: BookingNotificationData, theaterOwnerUserId?: string) {
     const seatsList = data.seats.join(', ');
     
+    // Send email notification
     await this.mailService.sendMail({
       to: data.theaterOwnerEmail,
       subject: `New Booking - ${data.movieName}`,
@@ -82,12 +101,66 @@ export class NotificationService {
         </div>
       `,
     });
+
+    // Send push notification if theaterOwnerUserId is provided
+    if (theaterOwnerUserId) {
+      await this.firebaseService.sendBookingNotificationToTheaterOwner(theaterOwnerUserId, {
+        bookingId: data.bookingId,
+        movieName: data.movieName,
+        showDate: data.showDate,
+        showTime: data.showTime,
+        screenName: data.screenName,
+        seats: data.seats,
+        totalAmount: data.totalAmount,
+        customerName: data.customerName,
+        customerEmail: data.customerEmail,
+      });
+    }
   }
 
-  async sendBookingNotifications(data: BookingNotificationData) {
+  async sendBookingNotifications(data: BookingNotificationData, customerUserId?: string, theaterOwnerUserId?: string) {
     await Promise.all([
-      this.sendBookingConfirmationToCustomer(data),
-      this.sendBookingNotificationToTheaterOwner(data),
+      this.sendBookingConfirmationToCustomer(data, customerUserId),
+      this.sendBookingNotificationToTheaterOwner(data, theaterOwnerUserId),
     ]);
+  }
+
+  async sendPaymentNotification(
+    userId: string,
+    paymentData: {
+      paymentId: string;
+      amount: number;
+      status: 'success' | 'failed';
+      movieName?: string;
+      bookingId?: string;
+    },
+  ) {
+    // Send email notification
+    await this.mailService.sendMail({
+      to: 'admin@movieticket.com', // Or get user email if needed
+      subject: `Payment ${paymentData.status === 'success' ? 'Success' : 'Failed'} - ${paymentData.paymentId}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: ${paymentData.status === 'success' ? '#28a745' : '#dc3545'};">
+            ${paymentData.status === 'success' ? '✅ Payment Successful' : '❌ Payment Failed'}
+          </h2>
+          <p>Payment details:</p>
+          
+          <div style="background-color: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <p><strong>Payment ID:</strong> ${paymentData.paymentId}</p>
+            <p><strong>Amount:</strong> ₹${paymentData.amount}</p>
+            <p><strong>Status:</strong> ${paymentData.status}</p>
+            ${paymentData.movieName ? `<p><strong>Movie:</strong> ${paymentData.movieName}</p>` : ''}
+            ${paymentData.bookingId ? `<p><strong>Booking ID:</strong> ${paymentData.bookingId}</p>` : ''}
+          </div>
+          
+          <hr style="margin: 30px 0; border: none; border-top: 1px solid #ddd;">
+          <p style="color: #666; font-size: 12px;">This is an automated notification.</p>
+        </div>
+      `,
+    });
+
+    // Send push notification
+    await this.firebaseService.sendPaymentNotification(userId, paymentData);
   }
 }

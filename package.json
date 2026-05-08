@@ -42,6 +42,7 @@
     "csv-writer": "^1.6.0",
     "dotenv": "^17.4.2",
     "ejs": "^5.0.2",
+    "firebase-admin": "^13.9.0",
     "ioredis": "^5.10.1",
     "multer": "^2.1.1",
     "nodemailer": "^8.0.5",
@@ -54,6 +55,7 @@
     "rxjs": "^7.8.1",
     "stripe": "^22.1.0",
     "swagger-ui-express": "^5.0.1",
+    "twilio": "^6.0.1",
     "typeorm": "^0.3.28",
     "xlsx": "^0.18.5"
   },

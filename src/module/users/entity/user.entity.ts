@@ -3,9 +3,11 @@ import {
   PrimaryGeneratedColumn,
   Column,
   ManyToOne,
+  OneToMany,
 } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 import { Role } from '../../role/entity/role.entity';
+import { DeviceToken } from '../../firebase/entity/device-token.entity';
 
 @Entity()
 export class User {
@@ -120,4 +122,7 @@ export class User {
   @ApiProperty({ example: null, description: 'Account locked until timestamp', nullable: true })
   @Column({ type: 'timestamp', nullable: true })
   lockedUntil: Date | null;
+
+  @OneToMany(() => DeviceToken, deviceToken => deviceToken.user, { cascade: true })
+  deviceTokens: DeviceToken[];
 }

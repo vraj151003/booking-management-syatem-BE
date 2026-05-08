@@ -14,11 +14,17 @@ export class StripeService {
     this.stripe = new Stripe(stripeSecretKey);
   }
 
-  async createPaymentIntent(amount: number){
+  async createPaymentIntent(amount: number, metadata?: Record<string, string>){
+    // Stripe requires a minimum amount (approx ₹45 / $0.50)
+    if (amount > 0 && amount < 45) {
+      throw new Error(`Amount ₹${amount} is too low for Stripe payment. Minimum required is approx ₹45 ($0.50).`);
+    }
+
     return this.stripe.paymentIntents.create({
-        amount : amount * 100,
+        amount : Math.round(amount * 100),
         currency : 'inr',
-        payment_method_types : ['card']
+        payment_method_types : ['card'],
+        metadata
     })
   }
 

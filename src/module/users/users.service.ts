@@ -11,6 +11,7 @@ import { UserFilterDto } from './dto/user-filter.dto';
 import * as bcrypt from 'bcrypt';
 import { MailService } from '../mail/mail.service';
 import { OtpService } from '../otp/otp.service';
+import { TwilioService } from '../twilio/twilio.service';
 
 @Injectable()
 export class UserService {
@@ -24,6 +25,8 @@ export class UserService {
     private readonly mailService: MailService,
 
     private readonly otpService: OtpService,
+
+    private readonly twilioService: TwilioService,
   ) {}
 
   async registerUser(data: any) {
@@ -178,17 +181,35 @@ export class UserService {
     return user;
   }
 
-  async forgotPassword(email: string) {
-    const user = await this.userRepo.findOne({ where: { email } });
+  async forgotPassword(emailOrMobile: string) {
+    // Find user by email or mobile number
+    const user = await this.userRepo.findOne({
+      where: [
+        { email: emailOrMobile },
+        { mobileNumber: emailOrMobile },
+      ],
+    });
 
     if (!user) throw new NotFoundException('User not found');
 
     const otp = await this.otpService.createOtp(user);
-    await this.mailService.sendOtpEmail(email, otp);
 
-    return {
-      message: 'OTP sent successfully',
-    };
+    // Send OTP via email if email is provided
+    if (emailOrMobile.includes('@')) {
+      await this.mailService.sendOtpEmail(emailOrMobile, otp);
+      return {
+        message: 'OTP sent successfully to your email',
+        method: 'email',
+      };
+    }
+    // Send OTP via SMS if mobile number is provided
+    else {
+      await this.twilioService.sendOtpSms(emailOrMobile, otp);
+      return {
+        message: 'OTP sent successfully to your mobile number',
+        method: 'sms',
+      };
+    }
   }
 
   async resetPassword(

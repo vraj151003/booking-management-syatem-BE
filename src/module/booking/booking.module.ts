@@ -12,6 +12,7 @@ import { PaymentModule } from '../payment/payment.module';
 import { NotificationModule } from '../notification/notification.module';
 import { CouponModule } from '../coupon/coupon.module';
 import { PricingModule } from '../pricing/pricing.module';
+import { FirebaseModule } from '../firebase/firebase.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { PricingModule } from '../pricing/pricing.module';
     CouponModule,
     PricingModule,
     AuditModule,
+    FirebaseModule,
   ],
   controllers: [BookingController],
   providers: [BookingService],

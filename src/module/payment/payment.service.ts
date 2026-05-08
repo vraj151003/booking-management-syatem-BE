@@ -3,12 +3,14 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Payment, PaymentStatus } from './entity/payment.entity';
 import { Repository } from 'typeorm';
 import { PaymentFilterDto } from './dto/payment-filter.dto';
+import { FirebaseService } from '../firebase/firebase.service';
 
 @Injectable()
 export class PaymentService {
   constructor(
     @InjectRepository(Payment)
     private readonly paymentRepo: Repository<Payment>,
+    private readonly firebaseService: FirebaseService,
   ) {}
 
   calculateGST(baseAmount: number): { gstRate: number; gstAmount: number; totalAmount: number } {
@@ -46,6 +48,17 @@ export class PaymentService {
     payment.status = PaymentStatus.SUCCESS;
     payment.transactionId = transactionId ?? null;
 
+    // Send Firebase push notification
+    if (payment.user?.id) {
+      await this.firebaseService.sendPaymentNotification(payment.user.id, {
+        paymentId: payment.id,
+        amount: payment.totalAmount,
+        status: 'success',
+        movieName: payment.booking?.show?.movie?.name,
+        bookingId: payment.booking?.id,
+      });
+    }
+
     return this.paymentRepo.save(payment);
   }
    async markFailed(paymentIntentId: string, reason?: string) {
@@ -57,6 +70,17 @@ export class PaymentService {
 
     payment.status = PaymentStatus.FAILED;
     payment.failureReason = reason ?? null;
+
+    // Send Firebase push notification
+    if (payment.user?.id) {
+      await this.firebaseService.sendPaymentNotification(payment.user.id, {
+        paymentId: payment.id,
+        amount: payment.totalAmount,
+        status: 'failed',
+        movieName: payment.booking?.show?.movie?.name,
+        bookingId: payment.booking?.id,
+      });
+    }
 
     return this.paymentRepo.save(payment);
   }

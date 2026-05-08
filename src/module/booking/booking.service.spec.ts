@@ -220,6 +220,7 @@ describe('BookingService', () => {
       expect(result.message).toBe('Payment initiated');
       expect(result.data.booking).toEqual(mockBooking);
       expect(result.data.clientSecret).toBe('secret-123');
+      expect(mockStripeService.createPaymentIntent).toHaveBeenCalledWith(336, { type: 'booking' });
       expect(mockPricingService.calculateDynamicPricingForSeats).toHaveBeenCalledWith(mockShow.pricing, mockShow.showDate, mockShow.startTime);
       expect(mockPaymentService.calculateGST).toHaveBeenCalledWith(500);
       expect(mockQueryRunner.connect).toHaveBeenCalled();
@@ -470,7 +471,7 @@ describe('BookingService', () => {
         seats: ['A1'],
         totalAmount: 450,
         bookingId: 'booking-123',
-      });
+      }, 'user-123', 'owner-123');
     });
 
     it('should throw error when booking not found', async () => {
@@ -510,6 +511,8 @@ describe('BookingService', () => {
         expect.objectContaining({
           seats: ['A1', 'A2', 'A3'],
         }),
+        'user-123',
+        'owner-123',
       );
     });
 
@@ -532,6 +535,8 @@ describe('BookingService', () => {
         expect.objectContaining({
           seats: [],
         }),
+        'user-123',
+        'owner-123',
       );
     });
 

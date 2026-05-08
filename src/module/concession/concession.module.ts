@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConcessionService } from './concession.service';
 import { ConcessionController } from './concession.controller';
@@ -7,6 +7,7 @@ import { Concession } from './entity/concession.entity';
 import { ConcessionCategory } from './entity/concession-category.entity';
 import { ConcessionOrder } from './entity/concession-order.entity';
 import { ConcessionOrderItem } from './entity/concession-order-item.entity';
+import { PaymentModule } from '../payment/payment.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { ConcessionOrderItem } from './entity/concession-order-item.entity';
       ConcessionOrderItem,
     ]),
     AuditModule,
+    forwardRef(() => PaymentModule),
   ],
   controllers: [ConcessionController],
   providers: [ConcessionService],

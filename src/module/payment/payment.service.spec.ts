@@ -3,6 +3,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { PaymentService } from './payment.service';
 import { Payment, PaymentStatus } from './entity/payment.entity';
 import { Repository } from 'typeorm';
+import { FirebaseService } from '../firebase/firebase.service';
 
 describe('PaymentService', () => {
   let service: PaymentService;
@@ -14,6 +15,10 @@ describe('PaymentService', () => {
     findOne: jest.fn(),
   };
 
+  const mockFirebaseService = {
+    sendPaymentNotification: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -21,6 +26,10 @@ describe('PaymentService', () => {
         {
           provide: getRepositoryToken(Payment),
           useValue: mockPaymentRepo,
+        },
+        {
+          provide: FirebaseService,
+          useValue: mockFirebaseService,
         },
       ],
     }).compile();

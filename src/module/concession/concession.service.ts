@@ -9,6 +9,7 @@ import { CreateConcessionDto } from './dto/create-concession.dto';
 import { CreateConcessionOrderDto } from './dto/create-concession-order.dto';
 import {  UpdateConcessionDto } from './dto/update-concession.dto';
 import { ConcessionFilterDto, ConcessionOrderFilterDto, ConcessionCategoryFilterDto } from './dto/concession-filter.dto';
+import { StripeService } from '../payment/stripe/stripe.service';
 
 @Injectable()
 export class ConcessionService {
@@ -21,6 +22,7 @@ export class ConcessionService {
     private readonly orderRepo: Repository<ConcessionOrder>,
     @InjectRepository(ConcessionOrderItem)
     private readonly orderItemRepo: Repository<ConcessionOrderItem>,
+    private readonly stripeService: StripeService,
   ) {}
 
   // Concession Management
@@ -169,7 +171,7 @@ export class ConcessionService {
     await this.categoryRepo.update(id, { isActive: false });
   }
 
-  async createConcessionOrder(createOrderDto: CreateConcessionOrderDto): Promise<ConcessionOrder> {
+  async createConcessionOrder(createOrderDto: CreateConcessionOrderDto): Promise<ConcessionOrder & { clientSecret?: string }> {
     // Check stock availability
     for (const item of createOrderDto.items) {
       const isAvailable = await this.checkStockAvailability(item.concessionId, item.quantity);
@@ -218,9 +220,21 @@ export class ConcessionService {
     // Update order total
     savedOrder.totalAmount = totalAmount;
     savedOrder.estimatedPreparationTime = this.calculatePreparationTime(createOrderDto.items);
+    
+    // Create Stripe Payment Intent
+    const paymentIntent = await this.stripeService.createPaymentIntent(totalAmount, {
+      type: 'concession',
+      orderId: savedOrder.id.toString(),
+      userId: createOrderDto.userId,
+    });
+    
+    savedOrder.paymentReference = paymentIntent.id;
     await this.orderRepo.save(savedOrder);
 
-    return savedOrder;
+    return {
+      ...savedOrder,
+      clientSecret: paymentIntent.client_secret,
+    } as any;
   }
 
   async getConcessionOrdersByUser(userId: string, filters?: ConcessionOrderFilterDto): Promise<ConcessionOrder[]> {

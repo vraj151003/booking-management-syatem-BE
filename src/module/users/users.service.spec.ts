@@ -7,6 +7,7 @@ import { Role } from '../role/entity/role.entity';
 import { Repository } from 'typeorm';
 import { MailService } from '../mail/mail.service';
 import { OtpService } from '../otp/otp.service';
+import { TwilioService } from '../twilio/twilio.service';
 import * as bcrypt from 'bcrypt';
 
 jest.mock('bcrypt');
@@ -17,6 +18,7 @@ describe('UserService', () => {
   let roleRepo: Repository<Role>;
   let mailService: MailService;
   let otpService: OtpService;
+  let twilioService: TwilioService;
 
   const mockUserRepo = {
     findOne: jest.fn(),
@@ -35,6 +37,11 @@ describe('UserService', () => {
   const mockOtpService = {
     createOtp: jest.fn(),
     verifyOtp: jest.fn(),
+  };
+
+  const mockTwilioService = {
+    sendOtpSms: jest.fn(),
+    isConfigured: jest.fn().mockReturnValue(true),
   };
 
   beforeEach(async () => {
@@ -57,6 +64,10 @@ describe('UserService', () => {
           provide: OtpService,
           useValue: mockOtpService,
         },
+        {
+          provide: TwilioService,
+          useValue: mockTwilioService,
+        },
       ],
     }).compile();
 
@@ -65,6 +76,7 @@ describe('UserService', () => {
     roleRepo = module.get<Repository<Role>>(getRepositoryToken(Role));
     mailService = module.get<MailService>(MailService);
     otpService = module.get<OtpService>(OtpService);
+    twilioService = module.get<TwilioService>(TwilioService);
 
     jest.clearAllMocks();
     (bcrypt.hash as jest.Mock).mockResolvedValue('hashed_password');
@@ -385,7 +397,10 @@ describe('UserService', () => {
       const result = await service.forgotPassword('john@example.com');
 
       // Assert
-      expect(result).toEqual({ message: 'OTP sent successfully' });
+      expect(result).toEqual({ 
+        message: 'OTP sent successfully to your email',
+        method: 'email',
+      });
       expect(mockOtpService.createOtp).toHaveBeenCalledWith(mockUser);
       expect(mockMailService.sendOtpEmail).toHaveBeenCalledWith('john@example.com', '123456');
     });
@@ -413,10 +428,79 @@ describe('UserService', () => {
       // Arrange
       mockUserRepo.findOne.mockResolvedValue(mockUser);
       mockOtpService.createOtp.mockResolvedValue('123456');
-      mockMailService.sendOtpEmail.mockRejectedValue(new Error('Email error'));
+      mockMailService.sendOtpEmail.mockRejectedValue(new Error('Email service failed'));
 
       // Act & Assert
-      await expect(service.forgotPassword('john@example.com')).rejects.toThrow('Email error');
+      await expect(service.forgotPassword('john@example.com')).rejects.toThrow('Email service failed');
+      expect(mockOtpService.createOtp).toHaveBeenCalledWith(mockUser);
+      expect(mockMailService.sendOtpEmail).toHaveBeenCalledWith('john@example.com', '123456');
+    });
+
+    it('should send OTP via SMS for mobile number', async () => {
+      // Arrange
+      const mockUserWithMobile = {
+        ...mockUser,
+        email: 'john@example.com',
+        mobileNumber: '+1234567890',
+      };
+      mockUserRepo.findOne.mockResolvedValue(mockUserWithMobile);
+      mockOtpService.createOtp.mockResolvedValue('123456');
+      mockTwilioService.sendOtpSms.mockResolvedValue(undefined);
+
+      // Act
+      const result = await service.forgotPassword('+1234567890');
+
+      // Assert
+      expect(result).toEqual({ 
+        message: 'OTP sent successfully to your mobile number',
+        method: 'sms',
+      });
+      expect(mockOtpService.createOtp).toHaveBeenCalledWith(mockUserWithMobile);
+      expect(mockTwilioService.sendOtpSms).toHaveBeenCalledWith('+1234567890', '123456');
+    });
+
+    it('should send OTP via mobile number even when Twilio is not configured', async () => {
+      // Arrange
+      const mockUserWithMobile = {
+        ...mockUser,
+        email: 'john@example.com',
+        mobileNumber: '+1234567890',
+      };
+      mockUserRepo.findOne.mockResolvedValue(mockUserWithMobile);
+      mockOtpService.createOtp.mockResolvedValue('123456');
+      mockTwilioService.isConfigured.mockReturnValue(false);
+      mockTwilioService.sendOtpSms.mockResolvedValue(undefined);
+
+      // Act
+      const result = await service.forgotPassword('+1234567890');
+
+      // Assert
+      expect(result).toEqual({ 
+        message: 'OTP sent successfully to your mobile number',
+        method: 'sms',
+      });
+      expect(mockOtpService.createOtp).toHaveBeenCalledWith(mockUserWithMobile);
+      expect(mockTwilioService.sendOtpSms).toHaveBeenCalledWith('+1234567890', '123456');
+      expect(mockMailService.sendOtpEmail).not.toHaveBeenCalled();
+    });  
+
+    it('should throw error when Twilio service fails', async () => {
+      // Arrange
+      const mockUserWithMobile = {
+        ...mockUser,
+        email: 'john@example.com',
+        mobileNumber: '+1234567890',
+      };
+      mockUserRepo.findOne.mockResolvedValue(mockUserWithMobile);
+      mockOtpService.createOtp.mockResolvedValue('123456');
+      mockTwilioService.isConfigured.mockReturnValue(true);
+      mockTwilioService.sendOtpSms.mockRejectedValue(new Error('Twilio service failed'));
+
+      // Act & Assert
+      await expect(service.forgotPassword('+1234567890')).rejects.toThrow('Twilio service failed');
+      expect(mockOtpService.createOtp).toHaveBeenCalledWith(mockUserWithMobile);
+      expect(mockTwilioService.sendOtpSms).toHaveBeenCalledWith('+1234567890', '123456');
+      expect(mockMailService.sendOtpEmail).not.toHaveBeenCalled();
     });
   });
 

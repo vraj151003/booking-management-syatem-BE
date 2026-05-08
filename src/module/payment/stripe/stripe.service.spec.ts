@@ -51,6 +51,35 @@ describe('StripeService', () => {
         amount: 50000,
         currency: 'inr',
         payment_method_types: ['card'],
+        metadata: undefined,
+      });
+    });
+
+    it('should create payment intent with metadata', async () => {
+      // Arrange
+      const amount = 500;
+      const metadata = { type: 'concession', orderId: '1' };
+      const mockPaymentIntent = {
+        id: 'pi_123',
+        client_secret: 'secret_123',
+        amount: 50000,
+        currency: 'inr',
+        metadata,
+      };
+      service['stripe'].paymentIntents = {
+        create: jest.fn().mockResolvedValue(mockPaymentIntent),
+      } as any;
+
+      // Act
+      const result = await service.createPaymentIntent(amount, metadata);
+
+      // Assert
+      expect(result).toEqual(mockPaymentIntent);
+      expect(service['stripe'].paymentIntents.create).toHaveBeenCalledWith({
+        amount: 50000,
+        currency: 'inr',
+        payment_method_types: ['card'],
+        metadata,
       });
     });
 

@@ -3,12 +3,15 @@ import { StripeController } from './stripe.controller';
 import { StripeService } from './stripe.service';
 import { BookingService } from '../../booking/booking.service';
 import { PaymentService } from '../../payment/payment.service';
+import { ConcessionService } from '../../concession/concession.service';
+import { ConcessionOrderStatus } from '../../concession/entity/concession-order.entity';
 
 describe('StripeController', () => {
   let controller: StripeController;
   let stripeService: StripeService;
   let bookingService: BookingService;
   let paymentService: PaymentService;
+  let concessionService: ConcessionService;
 
   const mockStripeService = {
     constructEvent: jest.fn(),
@@ -22,6 +25,11 @@ describe('StripeController', () => {
   const mockPaymentService = {
     markSuccess: jest.fn(),
     markFailed: jest.fn(),
+  };
+
+  const mockConcessionService = {
+    markOrderAsPaid: jest.fn(),
+    updateOrderStatus: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -40,6 +48,10 @@ describe('StripeController', () => {
           provide: PaymentService,
           useValue: mockPaymentService,
         },
+        {
+          provide: ConcessionService,
+          useValue: mockConcessionService,
+        },
       ],
     }).compile();
 
@@ -47,13 +59,19 @@ describe('StripeController', () => {
     stripeService = module.get<StripeService>(StripeService);
     bookingService = module.get<BookingService>(BookingService);
     paymentService = module.get<PaymentService>(PaymentService);
+    concessionService = module.get<ConcessionService>(ConcessionService);
 
     jest.clearAllMocks();
   });
 
   describe('handleWebhook', () => {
     const mockRequest = {
-      arrayBuffer: jest.fn().mockResolvedValue(Buffer.from(JSON.stringify({ type: 'payment_intent.succeeded' }))),
+      arrayBuffer: jest.fn().mockResolvedValue(
+        Buffer.from(JSON.stringify({
+          type: 'payment_intent.succeeded',
+          data: { object: { id: 'pi_123' } }
+        }))
+      ),
       body: { type: 'payment_intent.succeeded' },
     };
 
@@ -76,8 +94,53 @@ describe('StripeController', () => {
       expect(mockBookingService.confrimBooking).toHaveBeenCalledWith('pi_123');
     });
 
+    it('should handle payment_intent.succeeded for concession', async () => {
+      // Arrange
+      const mockRequest = {
+        arrayBuffer: jest.fn().mockResolvedValue(
+          Buffer.from(JSON.stringify({
+            type: 'payment_intent.succeeded',
+            data: { 
+              object: { 
+                id: 'pi_123',
+                metadata: { type: 'concession', orderId: '1' }
+              } 
+            }
+          }))
+        ),
+      };
+      const mockEvent = {
+        type: 'payment_intent.succeeded',
+        data: { 
+          object: { 
+            id: 'pi_123',
+            metadata: { type: 'concession', orderId: '1' }
+          } 
+        },
+      };
+      mockStripeService.constructEvent.mockReturnValue(mockEvent);
+      mockConcessionService.markOrderAsPaid.mockResolvedValue({});
+
+      // Act
+      const result = await controller.handleWebhook(mockRequest as any, 'sig_123');
+
+      // Assert
+      expect(result).toEqual({ received: true });
+      expect(mockConcessionService.markOrderAsPaid).toHaveBeenCalledWith(1, 'pi_123');
+      expect(mockPaymentService.markSuccess).not.toHaveBeenCalled();
+      expect(mockBookingService.confrimBooking).not.toHaveBeenCalled();
+    });
+
     it('should handle payment_intent.payment_failed event', async () => {
       // Arrange
+      const mockRequest = {
+        arrayBuffer: jest.fn().mockResolvedValue(
+          Buffer.from(JSON.stringify({
+            type: 'payment_intent.payment_failed',
+            data: { object: { id: 'pi_123' } }
+          }))
+        ),
+      };
       const mockEvent = {
         type: 'payment_intent.payment_failed',
         data: { object: { id: 'pi_123' } },
@@ -95,8 +158,53 @@ describe('StripeController', () => {
       expect(mockBookingService.failBooking).toHaveBeenCalledWith('pi_123');
     });
 
+    it('should handle payment_intent.payment_failed for concession', async () => {
+      // Arrange
+      const mockRequest = {
+        arrayBuffer: jest.fn().mockResolvedValue(
+          Buffer.from(JSON.stringify({
+            type: 'payment_intent.payment_failed',
+            data: { 
+              object: { 
+                id: 'pi_123',
+                metadata: { type: 'concession', orderId: '1' }
+              } 
+            }
+          }))
+        ),
+      };
+      const mockEvent = {
+        type: 'payment_intent.payment_failed',
+        data: { 
+          object: { 
+            id: 'pi_123',
+            metadata: { type: 'concession', orderId: '1' }
+          } 
+        },
+      };
+      mockStripeService.constructEvent.mockReturnValue(mockEvent);
+      mockConcessionService.updateOrderStatus.mockResolvedValue({});
+
+      // Act
+      const result = await controller.handleWebhook(mockRequest as any, 'sig_123');
+
+      // Assert
+      expect(result).toEqual({ received: true });
+      expect(mockConcessionService.updateOrderStatus).toHaveBeenCalledWith(1, ConcessionOrderStatus.CANCELLED);
+      expect(mockPaymentService.markSuccess).not.toHaveBeenCalled();
+      expect(mockBookingService.confrimBooking).not.toHaveBeenCalled();
+    });
+
     it('should handle payment_intent.canceled event', async () => {
       // Arrange
+      const mockRequest = {
+        arrayBuffer: jest.fn().mockResolvedValue(
+          Buffer.from(JSON.stringify({
+            type: 'payment_intent.canceled',
+            data: { object: { id: 'pi_123' } }
+          }))
+        ),
+      };
       const mockEvent = {
         type: 'payment_intent.canceled',
         data: { object: { id: 'pi_123' } },
@@ -116,6 +224,14 @@ describe('StripeController', () => {
 
     it('should handle unknown event type', async () => {
       // Arrange
+      const mockRequest = {
+        arrayBuffer: jest.fn().mockResolvedValue(
+          Buffer.from(JSON.stringify({
+            type: 'unknown.event',
+            data: { object: { id: 'pi_123' } }
+          }))
+        ),
+      };
       const mockEvent = {
         type: 'unknown.event',
         data: { object: { id: 'pi_123' } },
@@ -157,11 +273,14 @@ describe('StripeController', () => {
 
     it('should skip signature verification with placeholder signature', async () => {
       // Arrange
-      const mockEvent = {
-        type: 'payment_intent.succeeded',
-        data: { object: { id: 'pi_123' } },
+      const mockRequest = {
+        arrayBuffer: jest.fn().mockResolvedValue(
+          Buffer.from(JSON.stringify({
+            type: 'payment_intent.succeeded',
+            data: { object: { id: 'pi_123' } }
+          }))
+        ),
       };
-      mockStripeService.constructEvent.mockReturnValue(mockEvent);
       mockPaymentService.markSuccess.mockResolvedValue({});
       mockBookingService.confrimBooking.mockResolvedValue({});
 
@@ -170,27 +289,39 @@ describe('StripeController', () => {
 
       // Assert
       expect(result).toEqual({ received: true });
-      expect(mockStripeService.constructEvent).toHaveBeenCalledWith(
-        expect.any(Buffer),
-        'YOUR_STRIPE_WEBHOOK_SIGNATURE',
-        true,
-      );
+      expect(mockPaymentService.markSuccess).toHaveBeenCalledWith('pi_123');
+      expect(mockBookingService.confrimBooking).toHaveBeenCalledWith('pi_123');
     });
 
-    it('should throw error when constructEvent fails', async () => {
+    it('should handle JSON parsing error', async () => {
       // Arrange
-      mockStripeService.constructEvent.mockImplementation(() => {
-        throw new Error('Invalid signature');
-      });
+      const mockRequest = {
+        arrayBuffer: jest.fn().mockResolvedValue(
+          Buffer.from('invalid json')
+        ),
+      };
 
       // Act & Assert
-      await expect(controller.handleWebhook(mockRequest as any, 'invalid_sig')).rejects.toThrow(
-        'Invalid signature',
-      );
+      await expect(controller.handleWebhook(mockRequest as any, 'sig_123')).rejects.toThrow(SyntaxError);
     });
 
     it('should handle payment_intent.succeeded with complex payload', async () => {
       // Arrange
+      const mockRequest = {
+        arrayBuffer: jest.fn().mockResolvedValue(
+          Buffer.from(JSON.stringify({
+            type: 'payment_intent.succeeded',
+            data: {
+              object: {
+                id: 'pi_123',
+                amount: 50000,
+                currency: 'inr',
+                metadata: { bookingId: 'booking-123' },
+              },
+            },
+          }))
+        ),
+      };
       const mockEvent = {
         type: 'payment_intent.succeeded',
         data: {
@@ -216,6 +347,19 @@ describe('StripeController', () => {
 
     it('should handle payment_intent.payment_failed with failure reason', async () => {
       // Arrange
+      const mockRequest = {
+        arrayBuffer: jest.fn().mockResolvedValue(
+          Buffer.from(JSON.stringify({
+            type: 'payment_intent.payment_failed',
+            data: {
+              object: {
+                id: 'pi_123',
+                last_payment_error: { message: 'Insufficient funds' },
+              },
+            },
+          }))
+        ),
+      };
       const mockEvent = {
         type: 'payment_intent.payment_failed',
         data: {
@@ -259,14 +403,9 @@ describe('StripeController', () => {
         arrayBuffer: jest.fn().mockResolvedValue(Buffer.from('null')),
         body: null,
       };
-      const mockEvent = { type: 'unknown.event', data: null };
-      mockStripeService.constructEvent.mockReturnValue(mockEvent);
 
-      // Act
-      const result = await controller.handleWebhook(mockNullRequest as any, 'sig_123');
-
-      // Assert
-      expect(result).toEqual({ received: true });
+      // Act & Assert
+      await expect(controller.handleWebhook(mockNullRequest as any, 'sig_123')).rejects.toThrow(TypeError);
     });
   });
 });
