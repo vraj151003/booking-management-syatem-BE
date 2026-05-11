@@ -13,7 +13,6 @@ import { FirebaseService } from './firebase.service';
 import { DeviceToken } from './entity/device-token.entity';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
-import { User } from '../users/entity/user.entity';
 
 @ApiTags('Firebase')
 @Controller('firebase')
@@ -104,7 +103,7 @@ export class FirebaseController {
     @Request() req: Request,
   ) {
     const userId = (req as any).user?.id;
-    
+
     if (!userId) {
       return { success: false, message: 'User ID not found' };
     }
@@ -147,7 +146,6 @@ export class FirebaseController {
       const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(body.userId);
       
       if (!isValidUUID) {
-        // For non-UUID user IDs (like "test-user-web"), we'll create a mock response
         // without actually saving to the database to avoid UUID constraint errors
         const mockDeviceToken = {
           id: `test-token-${Date.now()}`,

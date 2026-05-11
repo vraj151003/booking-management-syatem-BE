@@ -13,6 +13,7 @@ import { NotificationModule } from '../notification/notification.module';
 import { CouponModule } from '../coupon/coupon.module';
 import { PricingModule } from '../pricing/pricing.module';
 import { FirebaseModule } from '../firebase/firebase.module';
+import { SeatLockModule } from '../seat-lock/seat-lock.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { FirebaseModule } from '../firebase/firebase.module';
     PricingModule,
     AuditModule,
     FirebaseModule,
+    forwardRef(() => SeatLockModule),
   ],
   controllers: [BookingController],
   providers: [BookingService],

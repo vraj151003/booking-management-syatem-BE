@@ -23,6 +23,8 @@ import * as path from 'path';
 import * as QRCode from 'qrcode';
 import * as csvWriter from 'csv-writer';
 import { AuditAction } from '../../common/constant';
+import { SeatLockGateway } from '../seat-lock/seat-lock.gateway';
+import { Inject, forwardRef } from '@nestjs/common';
 
 @Injectable()
 
@@ -39,6 +41,8 @@ export class BookingService {
     private couponService: CouponService,
     private pricingService: PricingService,
     private auditService: AuditService,
+    @Inject(forwardRef(() => SeatLockGateway))
+    private readonly seatLockGateway: SeatLockGateway,
   ) {}
 
   async createBooking(dto: CreateBookingDto) {
@@ -252,6 +256,14 @@ export class BookingService {
     for (const seat of booking.seats) {
       const key = `lock:${booking.show.id}:${seat.id}`;
       await this.redisService.deleteLock(key);
+    }
+
+    // Notify all connected clients that these seats are now permanently booked
+    try {
+      const seatIds = booking.seats.map((seat) => seat.id);
+      this.seatLockGateway.notifySeatBooked(booking.show.id, seatIds);
+    } catch (error) {
+      console.error('Failed to broadcast seat booking:', error);
     }
 
     // Send notifications to customer and theater owner

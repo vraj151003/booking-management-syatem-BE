@@ -11,6 +11,7 @@ import { NotificationService } from '../notification/notification.service';
 import { CouponService } from '../coupon/coupon.service';
 import { PricingService } from '../pricing/pricing.service';
 import { AuditService } from '../audit/audit.service';
+import { SeatLockGateway } from '../seat-lock/seat-lock.gateway';
 
 describe('BookingService', () => {
   let service: BookingService;
@@ -132,6 +133,12 @@ describe('BookingService', () => {
         {
           provide: AuditService,
           useValue: mockAuditService,
+        },
+        {
+          provide: SeatLockGateway,
+          useValue: {
+            notifySeatBooked: jest.fn(),
+          } as any,
         },
       ],
     }).compile();

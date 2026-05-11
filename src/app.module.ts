@@ -25,6 +25,8 @@ import { AuditModule } from './module/audit/audit.module';
 import { RecommendationModule } from './module/recommendation/recommendation.module';
 import { ThrottlerModule } from './common/throttler/throttler.module';
 import { RedisModule } from './module/redis/redis.module';
+import { SeatLockModule } from './module/seat-lock/seat-lock.module';
+import { ChatbotModule } from './module/chatbot/chatbot.module';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { CustomThrottlerGuard } from './common/throttler/throttler.guard';
 import { AuditInterceptor } from './module/audit/interceptors/audit.interceptor';
@@ -72,6 +74,8 @@ import { AuditInterceptor } from './module/audit/interceptors/audit.interceptor'
     PricingModule,
     TheaterAnalyticsModule,
     RecommendationModule,
+    SeatLockModule,
+    ChatbotModule,
   ],
   providers: [
     {

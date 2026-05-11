@@ -13,5 +13,6 @@ import { Movie } from '../movie/entity/movie.entity';
   imports: [TypeOrmModule.forFeature([Show, Screen, Seat, Booking, Movie]), AuditModule],
   providers: [ShowService],
   controllers: [ShowController],
+  exports: [ShowService],
 })
 export class ShowModule {}

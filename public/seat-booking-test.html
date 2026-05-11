@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-time Seat Booking Demo</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --available: #94a3b8;
+            --selected: #fbbf24;
+            --locked: #ef4444;
+            --booked: #334155;
+            --text-main: #f8fafc;
+            --text-dim: #94a3b8;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .container {
+            background-color: var(--card-bg);
+            padding: 2.5rem;
+            border-radius: 1.5rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            width: 100%;
+            max-width: 800px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            background: linear-gradient(to right, #818cf8, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: var(--text-dim);
+            margin-bottom: 2rem;
+            font-size: 0.9rem;
+        }
+
+        .screen {
+            height: 8px;
+            width: 80%;
+            background: linear-gradient(to bottom, var(--primary), transparent);
+            margin: 0 auto 3rem;
+            border-radius: 50%;
+            box-shadow: 0 10px 20px var(--primary);
+            position: relative;
+        }
+
+        .screen::after {
+            content: 'SCREEN';
+            position: absolute;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.7rem;
+            letter-spacing: 0.5rem;
+            color: var(--text-dim);
+        }
+
+        .seating-area {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            gap: 12px;
+            margin-bottom: 2rem;
+        }
+
+        .seat {
+            aspect-ratio: 1;
+            background-color: var(--available);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.6rem;
+            font-weight: 600;
+            color: rgba(0,0,0,0.3);
+        }
+
+        .seat:hover {
+            transform: scale(1.1);
+            background-color: #cbd5e1;
+        }
+
+        .seat.selected {
+            background-color: var(--selected);
+            box-shadow: 0 0 15px var(--selected);
+            color: #000;
+        }
+
+        .seat.locked {
+            background-color: var(--locked);
+            cursor: not-allowed;
+            box-shadow: 0 0 15px var(--locked);
+            color: #fff;
+        }
+
+        .seat.locked::after {
+            content: '🔒';
+            font-size: 0.8rem;
+        }
+
+        .seat.booked {
+            background-color: var(--booked);
+            cursor: not-allowed;
+            box-shadow: none;
+            color: rgba(255, 255, 255, 0.2);
+        }
+
+        .seat.booked::after {
+            content: '✖';
+            font-size: 0.8rem;
+        }
+
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 1.5rem;
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--text-dim);
+        }
+
+        .legend-box {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+        }
+
+        .status-badge {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 0.5rem 1rem;
+            border-radius: 2rem;
+            font-size: 0.8rem;
+            background-color: #10b981;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background-color: white;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.4; }
+            100% { opacity: 1; }
+        }
+
+        .user-id {
+            margin-top: 1rem;
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div id="status" class="status-badge">
+        <div class="status-dot"></div>
+        Connecting...
+    </div>
+
+    <div class="container">
+        <h1>Movie Seating</h1>
+        <p class="subtitle">Real-time seat selection with WebSocket locking</p>
+        
+        <div class="screen"></div>
+        
+        <div id="seating" class="seating-area">
+            <!-- Seats will be generated here -->
+        </div>
+
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-box" style="background-color: var(--available)"></div>
+                Available
+            </div>
+            <div class="legend-item">
+                <div class="legend-box" style="background-color: var(--selected)"></div>
+                Your Selection
+            </div>
+            <div class="legend-item">
+                <div class="legend-box" style="background-color: var(--locked)"></div>
+                Locked by others
+            </div>
+            <div class="legend-item">
+                <div class="legend-box" style="background-color: var(--booked)"></div>
+                Already Booked
+            </div>
+        </div>
+
+        <div class="user-id" id="user-info">
+            Initializing your profile...
+        </div>
+    </div>
+
+    <script>
+        const socket = io('/seats', {
+            path: '/socket.io'
+        });
+
+        const showId = 'demo-show-id';
+        const userId = 'user-' + Math.random().toString(36).substr(2, 9);
+        document.getElementById('user-info').innerText = `Your ID: ${userId} | Show: ${showId}`;
+
+        const seatingContainer = document.getElementById('seating');
+        const statusBadge = document.getElementById('status');
+        const seats = {};
+
+        // Generate 50 seats
+        for (let i = 1; i <= 50; i++) {
+            const seatId = `seat-${i}`;
+            const seatElement = document.createElement('div');
+            seatElement.className = 'seat';
+            seatElement.id = seatId;
+            seatElement.innerText = i;
+            
+            seatElement.onclick = () => toggleSeat(seatId);
+            
+            seatingContainer.appendChild(seatElement);
+            seats[seatId] = {
+                element: seatElement,
+                status: 'available'
+            };
+        }
+
+        function toggleSeat(seatId) {
+            const seat = seats[seatId];
+            if (seat.status === 'locked' || seat.status === 'booked') return;
+
+            if (seat.status === 'selected') {
+                socket.emit('unlockSeat', { showId, seatId, userId });
+                seat.status = 'available';
+                seat.element.classList.remove('selected');
+            } else {
+                socket.emit('lockSeat', { showId, seatId, userId });
+            }
+        }
+
+        socket.on('connect', () => {
+            statusBadge.style.backgroundColor = '#10b981';
+            statusBadge.innerHTML = '<div class="status-dot"></div> Connected';
+            socket.emit('joinShow', showId);
+        });
+
+        socket.on('disconnect', () => {
+            statusBadge.style.backgroundColor = '#ef4444';
+            statusBadge.innerHTML = '<div class="status-dot"></div> Disconnected';
+        });
+
+        socket.on('seatLocked', (data) => {
+            if (data.showId !== showId) return;
+            
+            const seat = seats[data.seatId];
+            if (!seat) return;
+
+            if (data.userId === userId) {
+                seat.status = 'selected';
+                seat.element.classList.add('selected');
+                seat.element.classList.remove('locked', 'booked');
+            } else {
+                seat.status = 'locked';
+                seat.element.classList.add('locked');
+                seat.element.classList.remove('selected', 'booked');
+            }
+        });
+
+        socket.on('seatUnlocked', (data) => {
+            if (data.showId !== showId) return;
+            
+            const seat = seats[data.seatId];
+            if (!seat) return;
+
+            seat.status = 'available';
+            seat.element.classList.remove('selected', 'locked', 'booked');
+        });
+
+        socket.on('seatsBooked', (data) => {
+            if (data.showId !== showId) return;
+            
+            data.seatIds.forEach(seatId => {
+                const seat = seats[seatId];
+                if (seat) {
+                    seat.status = 'booked';
+                    seat.element.classList.add('booked');
+                    seat.element.classList.remove('selected', 'locked');
+                }
+            });
+        });
+
+        socket.on('error', (data) => {
+            console.error('Socket error:', data);
+        });
+    </script>
+</body>
+</html>

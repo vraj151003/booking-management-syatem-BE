@@ -53,7 +53,9 @@ describe('FirebaseService - Simple Integration Test', () => {
         },
         {
           provide: getRepositoryToken(User),
-          useValue: {},
+          useValue: {
+            findOne: jest.fn(),
+          },
         },
       ],
     }).compile();

@@ -13,6 +13,6 @@ import { ScheduleModule } from '@nestjs/schedule';
   imports : [TypeOrmModule.forFeature([Movie, Cast, Crew]), ScheduleModule.forRoot(), AuditModule],
   providers: [MovieService, MovieScheduler],
   controllers: [MovieController],
-
+  exports: [MovieService],
 })
 export class MovieModule {}
